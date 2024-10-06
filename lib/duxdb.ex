@@ -25,8 +25,8 @@ defmodule DuxDB do
           | :uuid
           | :enum
 
-  # @spec library_version :: String.t()
-  # def library_version, do: :erlang.nif_error(:undef)
+  @spec library_version :: String.t()
+  def library_version, do: :erlang.nif_error(:undef)
 
   @spec open(Path.t()) :: db
   def open(path) do

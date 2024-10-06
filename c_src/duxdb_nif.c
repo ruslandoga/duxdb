@@ -41,12 +41,20 @@ typedef struct stmt
 } stmt_t;
 
 static ERL_NIF_TERM
-make_binary(ErlNifEnv *env, const unsigned char *bytes, size_t size)
+make_binary(ErlNifEnv *env, const char *bytes, size_t size)
 {
     ERL_NIF_TERM bin;
     uint8_t *data = enif_make_new_binary(env, size, &bin);
     memcpy(data, bytes, size);
     return bin;
+}
+
+static ERL_NIF_TERM
+duxdb_library_version(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    assert(argc == 0);
+    const char *version = duckdb_library_version();
+    return make_binary(env, version, strlen(version));
 }
 
 static ERL_NIF_TERM
@@ -157,8 +165,8 @@ on_load(ErlNifEnv *env, void **priv, ERL_NIF_TERM info)
 }
 
 static ErlNifFunc nif_funcs[] = {
+    {"library_version", 0, duxdb_library_version},
     {"dirty_io_open_nif", 1, duxdb_open, ERL_NIF_DIRTY_JOB_IO_BOUND},
-
 };
 
 ERL_NIF_INIT(Elixir.DuxDB, nif_funcs, on_load, NULL, NULL, NULL)
