@@ -13,7 +13,7 @@ defmodule DuxDB do
   def library_version, do: :erlang.nif_error(:undef)
 
   @spec open(Path.t()) :: db
-  def open(path), do: dirty_io_open_nif(<<path::binary, 0>>)
+  def open(path), do: dirty_io_open_nif(path <> <<0>>)
 
   # @spec open(Path.t(), config) :: db
   # def open(path, config) do

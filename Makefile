@@ -1,6 +1,6 @@
 KERNEL_NAME := $(shell uname -s)
 PRIV = $(MIX_APP_PATH)/priv
-OBJ  = $(MIX_APP_PATH)/obj
+BUILD  = $(MIX_APP_PATH)/obj
 LIB = $(PRIV)/duxdb_nif.so
 
 CFLAGS = -std=c23 -Ic_src -I"$(ERTS_INCLUDE_DIR)"
@@ -28,31 +28,27 @@ ifeq ($(KERNEL_NAME), Darwin)
 	LDFLAGS += -dynamiclib -undefined dynamic_lookup
 endif
 
-OBJS = $(OBJ)/duckdb.o $(OBJ)/duxdb_nif.o
+OBJS = $(BUILD)/duckdb.o $(BUILD)/duxdb_nif.o
 
-all: $(PRIV) $(OBJ) $(LIB)
+all: $(PRIV) $(BUILD) $(LIB)
 
 $(LIB): $(OBJS)
 	@echo " LD $(notdir $@)"
 	$(CC) $(LDFLAGS) $(OBJS) -o $(LIB)
 
-$(PRIV):
-	mkdir -p $(PRIV)
+$(PRIV) $(BUILD):
+	mkdir -p $@
 
-$(OBJ):
-	mkdir -p $(OBJ)
-
-$(OBJ)/duckdb.o: c_src/duckdb.cpp c_src/duckdb.hpp
+$(BUILD)/duckdb.o: c_src/duckdb.cpp c_src/duckdb.hpp
 	@echo " CXX $(notdir $@)"	
-	$(CXX) $(CXXFLAGS) -c c_src/duckdb.cpp -o $(OBJ)/duckdb.o
+	$(CXX) $(CXXFLAGS) -c c_src/duckdb.cpp -o $(BUILD)/duckdb.o
 
-$(OBJ)/duxdb_nif.o: c_src/duxdb_nif.c c_src/duckdb.h
+$(BUILD)/duxdb_nif.o: c_src/duxdb_nif.c c_src/duckdb.h
 	@echo " CC $(notdir $@)"
-	$(CC) $(CFLAGS) -c c_src/duxdb_nif.c -o $(OBJ)/duxdb_nif.o
+	$(CC) $(CFLAGS) -c c_src/duxdb_nif.c -o $(BUILD)/duxdb_nif.o
 
 clean:
-	$(RM) -rf $(OBJ)
-	$(RM) -f $(LIB)
+	$(RM) $(LIB) $(BUILD)
 
 .PHONY: all clean
 
