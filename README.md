@@ -31,4 +31,4 @@ result = DuxDB.execute_prepared(stmt)
 DuxDB.fetch_chunk(result)
 ```
 
-For more example, please see doctests and tests.
+For more examples, please see doctests and tests.
