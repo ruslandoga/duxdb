@@ -247,6 +247,17 @@ duxdb_connect(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
+duxdb_interrupt(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    conn_t *conn;
+    if (!enif_get_resource(env, argv[0], conn_type, (void **)&conn) || !conn->conn)
+        return make_badarg(env, argv[0]);
+
+    duckdb_interrupt(conn->conn);
+    return am_ok;
+}
+
+static ERL_NIF_TERM
 duxdb_disconnect(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
     conn_t *conn;
@@ -270,6 +281,7 @@ static ErlNifFunc nif_funcs[] = {
     {"open_ext_nif", 2, duxdb_open_ext},
     {"close", 1, duxdb_close},
     {"connect", 1, duxdb_connect},
+    {"interrupt", 1, duxdb_interrupt},
     {"disconnect", 1, duxdb_disconnect},
 };
 

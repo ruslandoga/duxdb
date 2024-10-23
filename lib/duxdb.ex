@@ -147,19 +147,18 @@ defmodule DuxDB do
   @spec connect(db) :: conn
   def connect(_db), do: :erlang.nif_error(:undef)
 
-  # TODO
-  # @doc """
-  # Interrupts a running query.
+  @doc """
+  Interrupts a running query.
 
-  #     iex> db = DuxDB.open(":memory:", DuxDB.create_config())
-  #     iex> conn = DuxDB.connect(db)
-  #     iex> DuxDB.interrupt(conn)
-  #     :ok
+      iex> db = DuxDB.open_ext(":memory:", DuxDB.create_config())
+      iex> conn = DuxDB.connect(db)
+      iex> DuxDB.interrupt(conn)
+      :ok
 
-  # See https://duckdb.org/docs/api/c/api#duckdb_interrupt
-  # """
-  # @spec interrupt(conn) :: :ok
-  # def interrupt(_conn), do: :erlang.nif_error(:undef)
+  See https://duckdb.org/docs/api/c/api#duckdb_interrupt
+  """
+  @spec interrupt(conn) :: :ok
+  def interrupt(_conn), do: :erlang.nif_error(:undef)
 
   @doc """
   Disconnects from a DuckDB database.
