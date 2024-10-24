@@ -257,6 +257,22 @@ duxdb_interrupt(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
+duxdb_query_progress(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    duxdb_conn *conn;
+    if (!enif_get_resource(env, argv[0], conn_t, (void **)&conn) || !(conn->duck))
+        return make_badarg(env, argv[0]);
+
+    duckdb_query_progress_type progress = duckdb_query_progress(conn->duck);
+
+    ERL_NIF_TERM percentage = enif_make_double(env, progress.percentage);
+    ERL_NIF_TERM rows_processed = enif_make_uint64(env, progress.rows_processed);
+    ERL_NIF_TERM total_rows_to_process = enif_make_uint64(env, progress.total_rows_to_process);
+
+    return enif_make_tuple3(env, percentage, rows_processed, total_rows_to_process);
+}
+
+static ERL_NIF_TERM
 duxdb_disconnect(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
     duxdb_conn *conn;
@@ -284,6 +300,7 @@ static ErlNifFunc nif_funcs[] = {
     {"close", 1, duxdb_close},
     {"connect", 1, duxdb_connect},
     {"interrupt", 1, duxdb_interrupt},
+    {"query_progress", 1, duxdb_query_progress},
     {"disconnect", 1, duxdb_disconnect},
 };
 

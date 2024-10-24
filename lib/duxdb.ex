@@ -161,6 +161,23 @@ defmodule DuxDB do
   def interrupt(_conn), do: :erlang.nif_error(:undef)
 
   @doc """
+  Gets progress of the running query.
+
+      iex> db = DuxDB.open_ext(":memory:", DuxDB.create_config())
+      iex> conn = DuxDB.connect(db)
+      iex> DuxDB.query_progress(conn)
+      {_percentage = -1.0, _rows_processed = 0, _total_rows_to_process = 0}
+
+  """
+  @spec query_progress(conn) ::
+          {
+            percentage :: float,
+            rows_processed :: non_neg_integer,
+            total_rows_to_process :: non_neg_integer
+          }
+  def query_progress(_conn), do: :erlang.nif_error(:undef)
+
+  @doc """
   Disconnects from a DuckDB database.
 
       iex> db = DuxDB.open_ext(":memory:", DuxDB.create_config())
