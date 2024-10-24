@@ -1,4 +1,3 @@
-#include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -11,47 +10,47 @@ static ERL_NIF_TERM am_nil;
 static ERL_NIF_TERM am_badarg;
 static ERL_NIF_TERM am_system_limit;
 
-static ErlNifResourceType *db_type = NULL;
-static ErlNifResourceType *conn_type = NULL;
-static ErlNifResourceType *config_type = NULL;
+static ErlNifResourceType *config_t;
+static ErlNifResourceType *db_t;
+static ErlNifResourceType *conn_t;
 
-typedef struct db
+typedef struct
 {
-    duckdb_database db;
-} db_t;
+    duckdb_config duck;
+} duxdb_config;
 
-typedef struct conn
+typedef struct
 {
-    duckdb_connection conn;
-} conn_t;
+    duckdb_database duck;
+} duxdb_db;
 
-typedef struct config
+typedef struct
 {
-    duckdb_config config;
-} config_t;
+    duckdb_connection duck;
+} duxdb_conn;
 
 static void
-db_type_destructor(ErlNifEnv *env, void *arg)
+config_destructor(ErlNifEnv *env, void *arg)
 {
-    db_t *db = (db_t *)arg;
-    if (db->db)
-        duckdb_close(&db->db);
+    duckdb_config config = ((duxdb_config *)arg)->duck;
+    if (config)
+        duckdb_destroy_config(&config);
 }
 
 static void
-conn_type_destructor(ErlNifEnv *env, void *arg)
+db_destructor(ErlNifEnv *env, void *arg)
 {
-    conn_t *conn = (conn_t *)arg;
-    if (conn->conn)
-        duckdb_disconnect(&conn->conn);
+    duckdb_database db = ((duxdb_db *)arg)->duck;
+    if (db)
+        duckdb_close(&db);
 }
 
 static void
-config_type_destructor(ErlNifEnv *env, void *arg)
+conn_destructor(ErlNifEnv *env, void *arg)
 {
-    config_t *config = (config_t *)arg;
-    if (config->config)
-        duckdb_destroy_config(&config->config);
+    duckdb_connection conn = ((duxdb_conn *)arg)->duck;
+    if (conn)
+        duckdb_disconnect(&conn);
 }
 
 static int
@@ -63,16 +62,16 @@ on_load(ErlNifEnv *env, void **priv, ERL_NIF_TERM info)
     am_badarg = enif_make_atom(env, "badarg");
     am_system_limit = enif_make_atom(env, "system_limit");
 
-    db_type = enif_open_resource_type(env, "duxdb", "db_type", db_type_destructor, ERL_NIF_RT_CREATE, NULL);
-    if (!db_type)
+    config_t = enif_open_resource_type(env, "duxdb", "config", config_destructor, ERL_NIF_RT_CREATE, NULL);
+    if (!config_t)
         return -1;
 
-    conn_type = enif_open_resource_type(env, "duxdb", "conn_type", conn_type_destructor, ERL_NIF_RT_CREATE, NULL);
-    if (!conn_type)
+    db_t = enif_open_resource_type(env, "duxdb", "db", db_destructor, ERL_NIF_RT_CREATE, NULL);
+    if (!db_t)
         return -1;
 
-    config_type = enif_open_resource_type(env, "duxdb", "config_type", config_type_destructor, ERL_NIF_RT_CREATE, NULL);
-    if (!config_type)
+    conn_t = enif_open_resource_type(env, "duxdb", "conn", conn_destructor, ERL_NIF_RT_CREATE, NULL);
+    if (!conn_t)
         return -1;
 
     return 0;
@@ -104,20 +103,16 @@ duxdb_library_version(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 static ERL_NIF_TERM
 duxdb_create_config(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    config_t *config = enif_alloc_resource(config_type, sizeof(config_t));
+    duxdb_config *config = enif_alloc_resource(config_t, sizeof(duxdb_config));
     if (!config)
         return enif_raise_exception(env, am_system_limit);
 
-    if (duckdb_create_config(&config->config) == DuckDBError)
-    {
-        config->config = NULL;
-        enif_release_resource(config);
+    if (duckdb_create_config(&(config->duck)) == DuckDBError)
         return enif_raise_exception(env, am_system_limit);
-    }
 
-    ERL_NIF_TERM result = enif_make_resource(env, config);
+    ERL_NIF_TERM config_resource = enif_make_resource(env, config);
     enif_release_resource(config);
-    return result;
+    return config_resource;
 }
 
 static ERL_NIF_TERM
@@ -147,8 +142,8 @@ duxdb_get_config_flag(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 static ERL_NIF_TERM
 duxdb_set_config(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    config_t *config;
-    if (!enif_get_resource(env, argv[0], config_type, (void **)&config) || !config->config)
+    duxdb_config *config;
+    if (!enif_get_resource(env, argv[0], config_t, (void **)&config) || !(config->duck))
         return make_badarg(env, argv[0]);
 
     ErlNifBinary name;
@@ -159,7 +154,7 @@ duxdb_set_config(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     if (!enif_inspect_iolist_as_binary(env, argv[2], &option))
         return make_badarg(env, argv[2]);
 
-    if (duckdb_set_config(config->config, (const char *)name.data, (const char *)option.data) == DuckDBError)
+    if (duckdb_set_config((config->duck), (const char *)name.data, (const char *)option.data) == DuckDBError)
         return am_error;
 
     return am_ok;
@@ -168,14 +163,16 @@ duxdb_set_config(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 static ERL_NIF_TERM
 duxdb_destroy_config(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    config_t *config;
-    if (!enif_get_resource(env, argv[0], config_type, (void **)&config))
+    duxdb_config *config;
+    if (!enif_get_resource(env, argv[0], config_t, (void **)&config))
         return make_badarg(env, argv[0]);
 
-    if (config->config)
-        duckdb_destroy_config(&config->config);
+    if (config->duck)
+    {
+        duckdb_destroy_config(&(config->duck));
+        config->duck = NULL;
+    }
 
-    config->config = NULL;
     return am_ok;
 }
 
@@ -186,88 +183,92 @@ duxdb_open_ext(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     if (!enif_inspect_iolist_as_binary(env, argv[0], &path))
         return make_badarg(env, argv[0]);
 
-    config_t *config;
-    if (!enif_get_resource(env, argv[1], config_type, (void **)&config) || !config->config)
+    duxdb_config *config;
+    if (!enif_get_resource(env, argv[1], config_t, (void **)&config) || !(config->duck))
         return make_badarg(env, argv[1]);
 
-    db_t *db = enif_alloc_resource(db_type, sizeof(db_t));
+    duxdb_db *db = enif_alloc_resource(db_t, sizeof(duxdb_db));
     if (!db)
         return enif_raise_exception(env, am_system_limit);
 
     char *out_error;
-    if (duckdb_open_ext((const char *)path.data, &db->db, config->config, &out_error) == DuckDBError)
+    if (duckdb_open_ext((const char *)path.data, &(db->duck), config->duck, &out_error) == DuckDBError)
     {
-        db->db = NULL;
+        db->duck = NULL;
         enif_release_resource(db);
-        ERL_NIF_TERM erl_error = make_binary(env, out_error, strlen(out_error));
+        ERL_NIF_TERM err = make_binary(env, out_error, strlen(out_error));
         duckdb_free(out_error);
-        return erl_error;
+        return err;
     }
 
-    ERL_NIF_TERM result = enif_make_resource(env, db);
+    ERL_NIF_TERM db_resource = enif_make_resource(env, db);
     enif_release_resource(db);
-    return result;
+    return db_resource;
 }
 
 static ERL_NIF_TERM
 duxdb_close(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    db_t *db;
-    if (!enif_get_resource(env, argv[0], db_type, (void **)&db))
+    duxdb_db *db;
+    if (!enif_get_resource(env, argv[0], db_t, (void **)&db))
         return make_badarg(env, argv[0]);
 
-    if (db->db)
-        duckdb_close(&db->db);
+    if (db->duck)
+    {
+        duckdb_close(&(db->duck));
+        db->duck = NULL;
+    }
 
-    db->db = NULL;
     return am_ok;
 }
 
 static ERL_NIF_TERM
 duxdb_connect(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    db_t *db;
-    if (!enif_get_resource(env, argv[0], db_type, (void **)&db) || !db->db)
+    duxdb_db *db;
+    if (!enif_get_resource(env, argv[0], db_t, (void **)&db) || !(db->duck))
         return make_badarg(env, argv[0]);
 
-    conn_t *conn = enif_alloc_resource(conn_type, sizeof(conn_t));
+    duxdb_conn *conn = enif_alloc_resource(conn_t, sizeof(duxdb_conn));
     if (!conn)
         return enif_raise_exception(env, am_system_limit);
 
-    if (duckdb_connect(db->db, &conn->conn) == DuckDBError)
+    if (duckdb_connect(db->duck, &(conn->duck)) == DuckDBError)
     {
-        conn->conn = NULL;
+        conn->duck = NULL;
         enif_release_resource(conn);
         return make_badarg(env, argv[0]);
     }
 
-    ERL_NIF_TERM result = enif_make_resource(env, conn);
+    ERL_NIF_TERM conn_resource = enif_make_resource(env, conn);
     enif_release_resource(conn);
-    return result;
+    return conn_resource;
 }
 
 static ERL_NIF_TERM
 duxdb_interrupt(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    conn_t *conn;
-    if (!enif_get_resource(env, argv[0], conn_type, (void **)&conn) || !conn->conn)
+    duxdb_conn *conn;
+    if (!enif_get_resource(env, argv[0], conn_t, (void **)&conn) || !(conn->duck))
         return make_badarg(env, argv[0]);
 
-    duckdb_interrupt(conn->conn);
+    duckdb_interrupt(conn->duck);
     return am_ok;
 }
 
 static ERL_NIF_TERM
 duxdb_disconnect(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    conn_t *conn;
-    if (!enif_get_resource(env, argv[0], conn_type, (void **)&conn))
+    duxdb_conn *conn;
+    if (!enif_get_resource(env, argv[0], conn_t, (void **)&conn))
         return make_badarg(env, argv[0]);
 
-    if (conn->conn)
-        duckdb_disconnect(&conn->conn);
+    if (conn->duck)
+    {
+        duckdb_disconnect(&(conn->duck));
+        conn->duck = NULL;
+    }
 
-    conn->conn = NULL;
     return am_ok;
 }
 
@@ -278,6 +279,7 @@ static ErlNifFunc nif_funcs[] = {
     {"get_config_flag", 1, duxdb_get_config_flag},
     {"set_config_nif", 3, duxdb_set_config},
     {"destroy_config", 1, duxdb_destroy_config},
+    // TODO: should open_ext_nif be dirty?
     {"open_ext_nif", 2, duxdb_open_ext},
     {"close", 1, duxdb_close},
     {"connect", 1, duxdb_connect},
