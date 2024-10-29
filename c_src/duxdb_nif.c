@@ -391,6 +391,22 @@ duxdb_query(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     return result_resource;
 }
 
+static ERL_NIF_TERM
+duxdb_destroy_result(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    duxdb_result *result;
+    if (!enif_get_resource(env, argv[0], result_t, (void **)&result))
+        return make_badarg(env, argv[0]);
+
+    if (result->duck.internal_data)
+    {
+        duckdb_destroy_result(&result->duck);
+        assert(result->duck.internal_data == NULL);
+    }
+
+    return am_ok;
+}
+
 static ErlNifFunc nif_funcs[] = {
     {"library_version", 0, duxdb_library_version},
 
@@ -414,6 +430,8 @@ static ErlNifFunc nif_funcs[] = {
     {"query_nif", 2, duxdb_query},
     {"query_dirty_io_nif", 2, duxdb_query, ERL_NIF_DIRTY_JOB_IO_BOUND},
     {"query_dirty_cpu_nif", 2, duxdb_query, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+
+    {"destroy_result", 1, duxdb_destroy_result},
 };
 
 ERL_NIF_INIT(Elixir.DuxDB, nif_funcs, on_load, NULL, NULL, NULL)

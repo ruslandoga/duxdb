@@ -276,6 +276,19 @@ defmodule DuxDB do
 
   defp query_dirty_io_nif(_conn, _sql), do: :erlang.nif_error(:undef)
 
+  @doc """
+  Closes the result and de-allocates all memory allocated for that connection.
+
+      iex> conn = DuxDB.connect(DuxDB.open_ext(":memory:", DuxDB.create_config()))
+      iex> result = DuxDB.query(conn, "SELECT 42")
+      iex> DuxDB.destroy_result(result)
+      :ok
+
+  See https://duckdb.org/docs/api/c/api#duckdb_destroy_result
+  """
+  @spec destroy_result(result) :: :ok
+  def destroy_result(_result), do: :erlang.nif_error(:undef)
+
   # TODO find a cleaner way
   @compile inline: [c_str: 1]
   defp c_str(v), do: [to_string(v), 0]
