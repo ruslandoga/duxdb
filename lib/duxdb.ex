@@ -1,9 +1,18 @@
 defmodule DuxDB do
   @moduledoc "DuckDB in Elixir"
 
+  @type config :: reference
   @type db :: reference
   @type conn :: reference
-  @type config :: reference
+  @type result :: reference
+  # TODO
+  # @type stmt :: reference
+  # @type appender :: reference
+  # @type row :: [binary | number | nil]
+
+  defmodule Error do
+    defexception [:code, :message]
+  end
 
   @doc """
   Returns the version of the linked DuckDB library.
@@ -121,6 +130,19 @@ defmodule DuxDB do
   defp open_ext_nif(_path, _config), do: :erlang.nif_error(:undef)
 
   @doc """
+  Same as `open_ext/2` but gets executed on a Dirty IO scheduler.
+  """
+  @spec open_ext_dirty_io(Path.t(), config) :: db
+  def open_ext_dirty_io(path, config) do
+    case open_ext_dirty_io_nif(c_str(path), config) do
+      db when is_reference(db) -> db
+      error when is_binary(error) -> raise RuntimeError, message: error
+    end
+  end
+
+  defp open_ext_dirty_io_nif(_path, _config), do: :erlang.nif_error(:undef)
+
+  @doc """
   Closes a DuckDB database.
 
       iex> db = DuxDB.open_ext(":memory:", DuxDB.create_config())
@@ -131,6 +153,12 @@ defmodule DuxDB do
   """
   @spec close(db) :: :ok
   def close(_db), do: :erlang.nif_error(:undef)
+
+  @doc """
+  Same as `close/1` but gets executed on a Dirty IO scheduler.
+  """
+  @spec close(db) :: :ok
+  def close_dirty_io(_db), do: :erlang.nif_error(:undef)
 
   @doc """
   Connects to a DuckDB database.
@@ -168,6 +196,7 @@ defmodule DuxDB do
       iex> DuxDB.query_progress(conn)
       {_percentage = -1.0, _rows_processed = 0, _total_rows_to_process = 0}
 
+  See https://duckdb.org/docs/api/c/api#duckdb_query_progress
   """
   @spec query_progress(conn) ::
           {
@@ -189,6 +218,63 @@ defmodule DuxDB do
   """
   @spec disconnect(conn) :: :ok
   def disconnect(_conn), do: :erlang.nif_error(:undef)
+
+  @doc """
+  Executes an SQL query within a connection and stores the full (materialized) result in the returned reference.
+
+  > Runs on a main scheduler. {: .warning}
+  >
+  > Executing a lengthy query can degrade the VM's responsiveness.
+  > If you expect the query to take longer than 1 millisecond, consider using `query_dirty_cpu/2` or `query_dirty_io/2` instead.
+
+      iex> conn = DuxDB.connect(DuxDB.open_ext(":memory:", DuxDB.create_config()))
+      iex> result = DuxDB.query(conn, "SELECT 42")
+      iex> is_reference(result)
+      true
+
+      iex> conn = DuxDB.connect(DuxDB.open_ext(":memory:", DuxDB.create_config()))
+      iex> DuxDB.query(conn, "SEL 42")
+      ** (DuxDB.Error) Parser Error: syntax error at or near "SEL"
+      LINE 1: SEL 42
+              ^
+
+  See https://duckdb.org/docs/api/c/api#duckdb_query
+  """
+  @spec query(conn, String.t()) :: result
+  def query(conn, sql) do
+    case query_nif(conn, c_str(sql)) do
+      result when is_reference(result) -> result
+      {err, msg} -> raise Error, code: err, message: msg
+    end
+  end
+
+  defp query_nif(_conn, _sql), do: :erlang.nif_error(:undef)
+
+  @doc """
+  Same as `query/2` but gets executed on a Dirty CPU scheduler.
+  """
+  @spec query_dirty_cpu(conn, String.t()) :: result
+  def query_dirty_cpu(conn, sql) do
+    case query_dirty_cpu_nif(conn, c_str(sql)) do
+      result when is_reference(result) -> result
+      {err, msg} -> raise Error, code: err, message: msg
+    end
+  end
+
+  defp query_dirty_cpu_nif(_conn, _sql), do: :erlang.nif_error(:undef)
+
+  @doc """
+  Same as `query/2` but gets executed on a Dirty IO scheduler.
+  """
+  @spec query_dirty_io(conn, String.t()) :: result
+  def query_dirty_io(conn, sql) do
+    case query_dirty_io_nif(conn, c_str(sql)) do
+      result when is_reference(result) -> result
+      {err, msg} -> raise Error, code: err, message: msg
+    end
+  end
+
+  defp query_dirty_io_nif(_conn, _sql), do: :erlang.nif_error(:undef)
 
   # TODO find a cleaner way
   @compile inline: [c_str: 1]
