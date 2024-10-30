@@ -25,13 +25,13 @@ defmodule DuxDBTest do
       config = DuxDB.create_config()
       assert :ok == DuxDB.set_config(config, "sdf", "asdf")
 
-      assert_raise RuntimeError,
+      assert_raise ArgumentError,
                    "Invalid Input Error: The following options were not recognized: sdf",
                    fn -> DuxDB.open_ext(":memory:", config) end
     end
 
     test "fails on invalid path" do
-      assert_raise RuntimeError,
+      assert_raise ArgumentError,
                    "IO Error: Cannot open file \"tmp/somewhere/test.db\": No such file or directory",
                    fn -> DuxDB.open_ext("tmp/somewhere/test.db", DuxDB.create_config()) end
     end

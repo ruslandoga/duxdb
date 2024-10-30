@@ -83,6 +83,9 @@ defmodule DuxDB do
         {"allow_extensions_metadata_mismatch", "Allow to load extensions with not compatible metadata"}
       ]
 
+      iex> DuxDB.get_config_flag(DuxDB.config_count() + 1)
+      ** (ArgumentError) argument error: 101
+
   See https://duckdb.org/docs/api/c/api#duckdb_get_config_flag
   """
   @spec get_config_flag(non_neg_integer) :: {name :: String.t(), description :: String.t()}
@@ -96,7 +99,7 @@ defmodule DuxDB do
       :ok
 
       iex> config = DuxDB.create_config()
-      iex> DuxDB.set_config(config, "access_mode", "READ_AND_DREAM")
+      iex> DuxDB.set_config(config, "access_mode", "EAT_LOVE")
       :error
 
   See https://duckdb.org/docs/api/c/api#duckdb_set_config
@@ -129,12 +132,14 @@ defmodule DuxDB do
 
       iex> path = "test.db"
       iex> config = DuxDB.create_config()
-      iex> :ok = DuxDB.set_config(config, "access_mode", "READ_WRITE")
-      iex> :ok = DuxDB.set_config(config, "threads", "8")
       iex> :ok = DuxDB.set_config(config, "max_memory", "8GB")
       iex> db = DuxDB.open_ext(path, config)
       iex> is_reference(db)
       true
+
+      iex> bad_path = "/this/path/not/exists/test.db "
+      iex> DuxDB.open_ext(bad_path, DuxDB.create_config())
+      ** (ArgumentError) IO Error: Cannot open file "/this/path/not/exists/test.db ": No such file or directory
 
   The database is closed with `close/1` or on garbage collection.
 
@@ -144,7 +149,7 @@ defmodule DuxDB do
   def open_ext(path, config) do
     case open_ext_nif(c_str(path), config) do
       db when is_reference(db) -> db
-      error when is_binary(error) -> raise RuntimeError, message: error
+      error when is_binary(error) -> raise ArgumentError, message: error
     end
   end
 
@@ -157,7 +162,7 @@ defmodule DuxDB do
   def open_ext_dirty_io(path, config) do
     case open_ext_dirty_io_nif(c_str(path), config) do
       db when is_reference(db) -> db
-      error when is_binary(error) -> raise RuntimeError, message: error
+      error when is_binary(error) -> raise ArgumentError, message: error
     end
   end
 
@@ -486,7 +491,7 @@ defmodule DuxDB do
 
       iex> conn = DuxDB.connect(DuxDB.open_ext(":memory:", DuxDB.create_config()))
       iex> DuxDB.prepare(conn, "SEL ?")
-      ** (RuntimeError) Parser Error: syntax error at or near "SEL"
+      ** (ArgumentError) Parser Error: syntax error at or near "SEL"
       LINE 1: SEL ?
               ^
 
@@ -498,7 +503,7 @@ defmodule DuxDB do
   def prepare(conn, sql) do
     case prepare_nif(conn, c_str(sql)) do
       stmt when is_reference(stmt) -> stmt
-      error -> raise RuntimeError, message: error
+      error -> raise ArgumentError, message: error
     end
   end
 
@@ -511,7 +516,7 @@ defmodule DuxDB do
   def prepare_dirty_cpu(conn, sql) do
     case prepare_dirty_cpu_nif(conn, c_str(sql)) do
       stmt when is_reference(stmt) -> stmt
-      error -> raise RuntimeError, message: error
+      error -> raise ArgumentError, message: error
     end
   end
 
