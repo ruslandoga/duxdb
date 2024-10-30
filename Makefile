@@ -3,8 +3,8 @@ PRIV = $(MIX_APP_PATH)/priv
 BUILD = $(MIX_APP_PATH)/obj
 LIB = $(PRIV)/duxdb_nif.so
 
-DUXDB_EXTRA_CFLAGS ?=
-DUXDB_EXTRA_LDFLAGS ?=
+DUXDB_CFLAGS ?=
+DUXDB_LDFLAGS ?=
 
 CFLAGS = -Ic_src -I"$(ERTS_INCLUDE_DIR)" -fPIC -pedantic -Wall -Wextra -Werror \
 	-Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wno-unused-but-set-variable \
@@ -32,14 +32,14 @@ all: $(PRIV) $(BUILD) $(LIB)
 
 $(LIB): $(BUILD)/duxdb_nif.o
 	@echo "LD $(notdir $@)"
-	$(CC) $(BUILD)/duxdb_nif.o $(LDFLAGS) $(DUXDB_EXTRA_LDFLAGS) -o $@
+	$(CC) $(BUILD)/duxdb_nif.o $(LDFLAGS) $(DUXDB_LDFLAGS) -o $@
 
 $(PRIV) $(BUILD):
 	mkdir -p $@
 
 $(BUILD)/duxdb_nif.o: c_src/duxdb_nif.c
 	@echo "CC $(notdir $@)"
-	$(CC) $(CFLAGS) $(DUXDB_EXTRA_CFLAGS) -c c_src/duxdb_nif.c -o $@
+	$(CC) $(CFLAGS) $(DUXDB_CFLAGS) -c c_src/duxdb_nif.c -o $@
 
 clean:
 	$(RM) $(LIB) $(BUILD)

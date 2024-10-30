@@ -14,8 +14,8 @@ clang --version
 # Homebrew clang version 19.1.2
 
 export CC=$(which clang)
-export DUXDB_EXTRA_CFLAGS=-std=c23
-export DUXDB_EXTRA_LDFLAGS=-L/opt/homebrew/opt/duckdb/lib
+export DUXDB_CFLAGS=-std=c23
+export DUXDB_LDFLAGS=-L/opt/homebrew/opt/duckdb/lib
 ```
 
 ```elixir

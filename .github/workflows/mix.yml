@@ -46,7 +46,7 @@ jobs:
       - run: mix deps.get --only $MIX_ENV
       - run: mix compile --warnings-as-errors
         env:
-          DUXDB_EXTRA_LDFLAGS: -L./libduckdb -Wl,-rpath=./libduckdb
+          DUXDB_LDFLAGS: -L./libduckdb -Wl,-rpath=./libduckdb
 
       - run: mix test
 
