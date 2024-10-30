@@ -4,6 +4,20 @@ The current API tries to map 1-to-1 to DuckDB C API. This is very verbose and lo
 
 Here's an example of how it can be used on its own:
 
+```sh
+brew install duckdb llvm
+
+duckdb --version
+# v1.1.2 f680b7d08f
+
+clang --version
+# Homebrew clang version 19.1.2
+
+export CC=$(which clang)
+export DUXDB_EXTRA_CFLAGS=-std=c23
+export DUXDB_EXTRA_LDFLAGS=-L/opt/homebrew/opt/duckdb/lib
+```
+
 ```elixir
 Mix.install([
   {:duxdb, github: "ruslandoga/duxdb"}

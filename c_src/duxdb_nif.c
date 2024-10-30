@@ -581,55 +581,80 @@ duxdb_data_chunk_get_vector(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
             switch (type)
             {
             case DUCKDB_TYPE_BOOLEAN:
+            {
                 terms[i] = ((bool *)data)[i] ? am_true : am_false;
                 break;
+            }
 
             case DUCKDB_TYPE_TINYINT:
+            {
                 terms[i] = enif_make_int(env, ((int8_t *)data)[i]);
                 break;
+            }
 
             case DUCKDB_TYPE_SMALLINT:
+            {
                 terms[i] = enif_make_int(env, ((int16_t *)data)[i]);
                 break;
+            }
 
             case DUCKDB_TYPE_INTEGER:
+            {
                 terms[i] = enif_make_int(env, ((int32_t *)data)[i]);
                 break;
+            }
 
             case DUCKDB_TYPE_BIGINT:
+            {
                 terms[i] = enif_make_int64(env, ((int64_t *)data)[i]);
                 break;
+            }
 
             case DUCKDB_TYPE_UTINYINT:
+            {
                 terms[i] = enif_make_uint(env, ((uint8_t *)data)[i]);
                 break;
+            }
 
             case DUCKDB_TYPE_USMALLINT:
+            {
                 terms[i] = enif_make_uint(env, ((uint16_t *)data)[i]);
                 break;
+            }
 
             case DUCKDB_TYPE_UINTEGER:
+            {
                 terms[i] = enif_make_uint(env, ((uint32_t *)data)[i]);
                 break;
+            }
 
             case DUCKDB_TYPE_UBIGINT:
+            {
                 terms[i] = enif_make_uint64(env, ((uint64_t *)data)[i]);
                 break;
+            }
 
             case DUCKDB_TYPE_FLOAT:
+            {
                 terms[i] = enif_make_double(env, ((float *)data)[i]);
                 break;
+            }
 
             case DUCKDB_TYPE_DOUBLE:
+            {
                 terms[i] = enif_make_double(env, ((double *)data)[i]);
                 break;
+            }
 
             case DUCKDB_TYPE_TIMESTAMP:
+            {
                 duckdb_timestamp ts = ((duckdb_timestamp *)data)[i];
                 terms[i] = enif_make_uint64(env, ts.micros);
                 break;
+            }
 
             case DUCKDB_TYPE_DATE:
+            {
                 duckdb_date d = ((duckdb_date *)data)[i];
                 duckdb_date_struct ds = duckdb_from_date(d);
 
@@ -642,29 +667,39 @@ duxdb_data_chunk_get_vector(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
                     &terms[i]);
 
                 break;
+            }
 
             case DUCKDB_TYPE_TIME:
+            {
                 duckdb_time t = ((duckdb_time *)data)[i];
                 terms[i] = enif_make_int64(env, t.micros);
                 break;
+            }
 
             case DUCKDB_TYPE_INTERVAL:
+            {
                 duckdb_interval in = ((duckdb_interval *)data)[i];
                 terms[i] = enif_make_tuple3(env, enif_make_int(env, in.months), enif_make_int(env, in.days), enif_make_int64(env, in.micros));
                 break;
+            }
 
             case DUCKDB_TYPE_HUGEINT:
+            {
                 duckdb_hugeint hi = ((duckdb_hugeint *)data)[i];
                 terms[i] = enif_make_tuple2(env, enif_make_int64(env, hi.upper), enif_make_uint64(env, hi.lower));
                 break;
+            }
 
             case DUCKDB_TYPE_UHUGEINT:
+            {
                 duckdb_uhugeint uhi = ((duckdb_uhugeint *)data)[i];
                 terms[i] = enif_make_tuple2(env, enif_make_uint64(env, uhi.upper), enif_make_uint64(env, uhi.lower));
                 break;
+            }
 
             case DUCKDB_TYPE_VARCHAR:
             case DUCKDB_TYPE_BLOB:
+            {
                 duckdb_string_t str = ((duckdb_string_t *)data)[i];
 
                 if (duckdb_string_is_inlined(str))
@@ -678,79 +713,116 @@ duxdb_data_chunk_get_vector(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
                 }
 
                 break;
+            }
 
             case DUCKDB_TYPE_DECIMAL:
+            {
                 terms[i] = am_nil;
                 break;
+            }
 
             case DUCKDB_TYPE_TIMESTAMP_S:
+            {
                 terms[i] = am_nil;
                 break;
+            }
 
             case DUCKDB_TYPE_TIMESTAMP_MS:
+            {
                 terms[i] = am_nil;
                 break;
+            }
 
             case DUCKDB_TYPE_TIMESTAMP_NS:
+            {
                 terms[i] = am_nil;
                 break;
+            }
 
             case DUCKDB_TYPE_ENUM:
+            {
                 terms[i] = am_nil;
                 break;
+            }
 
             case DUCKDB_TYPE_LIST:
+            {
                 terms[i] = am_nil;
                 break;
+            }
 
             case DUCKDB_TYPE_STRUCT:
+            {
                 terms[i] = am_nil;
                 break;
+            }
 
             case DUCKDB_TYPE_MAP:
+            {
                 terms[i] = am_nil;
                 break;
+            }
 
             case DUCKDB_TYPE_ARRAY:
+            {
                 terms[i] = am_nil;
                 break;
+            }
 
             case DUCKDB_TYPE_UUID:
+            {
                 terms[i] = am_nil;
                 break;
+            }
 
             case DUCKDB_TYPE_UNION:
+            {
                 terms[i] = am_nil;
                 break;
+            }
 
             case DUCKDB_TYPE_BIT:
+            {
                 terms[i] = am_nil;
                 break;
+            }
 
             case DUCKDB_TYPE_TIME_TZ:
+            {
                 terms[i] = am_nil;
                 break;
+            }
 
             case DUCKDB_TYPE_TIMESTAMP_TZ:
+            {
                 terms[i] = am_nil;
                 break;
+            }
 
             case DUCKDB_TYPE_ANY:
+            {
                 terms[i] = am_nil;
                 break;
+            }
 
             case DUCKDB_TYPE_VARINT:
+            {
                 terms[i] = am_nil;
                 break;
+            }
 
             case DUCKDB_TYPE_SQLNULL:
+            {
                 terms[i] = am_nil;
                 break;
+            }
 
             default:
+            {
                 // TODO raise exception
                 terms[i] = am_nil;
                 break;
+            }
             }
         }
         else
@@ -1090,63 +1162,63 @@ duxdb_bind_null(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ErlNifFunc nif_funcs[] = {
-    {"library_version", 0, duxdb_library_version},
+    {"library_version", 0, duxdb_library_version, 0},
 
-    {"create_config", 0, duxdb_create_config},
-    {"config_count", 0, duxdb_config_count},
-    {"get_config_flag", 1, duxdb_get_config_flag},
-    {"set_config_nif", 3, duxdb_set_config},
-    {"destroy_config", 1, duxdb_destroy_config},
+    {"create_config", 0, duxdb_create_config, 0},
+    {"config_count", 0, duxdb_config_count, 0},
+    {"get_config_flag", 1, duxdb_get_config_flag, 0},
+    {"set_config_nif", 3, duxdb_set_config, 0},
+    {"destroy_config", 1, duxdb_destroy_config, 0},
 
-    {"open_ext_nif", 2, duxdb_open_ext},
+    {"open_ext_nif", 2, duxdb_open_ext, 0},
     {"open_ext_dirty_io_nif", 2, duxdb_open_ext, ERL_NIF_DIRTY_JOB_IO_BOUND},
 
-    {"close", 1, duxdb_close},
+    {"close", 1, duxdb_close, 0},
     {"close_dirty_io", 1, duxdb_close, ERL_NIF_DIRTY_JOB_IO_BOUND},
 
-    {"connect", 1, duxdb_connect},
-    {"interrupt", 1, duxdb_interrupt},
-    {"query_progress", 1, duxdb_query_progress},
-    {"disconnect", 1, duxdb_disconnect},
+    {"connect", 1, duxdb_connect, 0},
+    {"interrupt", 1, duxdb_interrupt, 0},
+    {"query_progress", 1, duxdb_query_progress, 0},
+    {"disconnect", 1, duxdb_disconnect, 0},
 
-    {"query_nif", 2, duxdb_query},
+    {"query_nif", 2, duxdb_query, 0},
     {"query_dirty_io_nif", 2, duxdb_query, ERL_NIF_DIRTY_JOB_IO_BOUND},
     {"query_dirty_cpu_nif", 2, duxdb_query, ERL_NIF_DIRTY_JOB_CPU_BOUND},
 
-    {"destroy_result", 1, duxdb_destroy_result},
-    {"column_name", 2, duxdb_column_name},
-    {"result_statement_type", 1, duxdb_result_statement_type},
-    {"column_count", 1, duxdb_column_count},
-    {"rows_changed", 1, duxdb_rows_changed},
-    {"result_return_type", 1, duxdb_result_return_type},
+    {"destroy_result", 1, duxdb_destroy_result, 0},
+    {"column_name", 2, duxdb_column_name, 0},
+    {"result_statement_type", 1, duxdb_result_statement_type, 0},
+    {"column_count", 1, duxdb_column_count, 0},
+    {"rows_changed", 1, duxdb_rows_changed, 0},
+    {"result_return_type", 1, duxdb_result_return_type, 0},
 
-    {"fetch_chunk", 1, duxdb_fetch_chunk},
-    {"destroy_data_chunk", 1, duxdb_destroy_data_chunk},
-    {"data_chunk_get_column_count", 1, duxdb_data_chunk_get_column_count},
-    {"data_chunk_get_vector", 2, duxdb_data_chunk_get_vector},
+    {"fetch_chunk", 1, duxdb_fetch_chunk, 0},
+    {"destroy_data_chunk", 1, duxdb_destroy_data_chunk, 0},
+    {"data_chunk_get_column_count", 1, duxdb_data_chunk_get_column_count, 0},
+    {"data_chunk_get_vector", 2, duxdb_data_chunk_get_vector, 0},
 
-    {"prepare_nif", 2, duxdb_prepare_nif},
+    {"prepare_nif", 2, duxdb_prepare_nif, 0},
     {"prepare_dirty_cpu_nif", 2, duxdb_prepare_nif, ERL_NIF_DIRTY_JOB_CPU_BOUND},
 
-    {"destroy_prepare", 1, duxdb_destroy_prepare},
-    {"nparams", 1, duxdb_nparams},
-    {"parameter_name", 2, duxdb_parameter_name},
-    {"bind_parameter_index_nif", 2, duxdb_bind_parameter_index},
-    {"clear_bindings", 1, duxdb_clear_bindings},
-    {"prepared_statement_type", 1, duxdb_prepared_statement_type},
+    {"destroy_prepare", 1, duxdb_destroy_prepare, 0},
+    {"nparams", 1, duxdb_nparams, 0},
+    {"parameter_name", 2, duxdb_parameter_name, 0},
+    {"bind_parameter_index_nif", 2, duxdb_bind_parameter_index, 0},
+    {"clear_bindings", 1, duxdb_clear_bindings, 0},
+    {"prepared_statement_type", 1, duxdb_prepared_statement_type, 0},
 
-    {"execute_prepared_nif", 1, duxdb_execute_prepared},
+    {"execute_prepared_nif", 1, duxdb_execute_prepared, 0},
     {"execute_prepared_dirty_io_nif", 1, duxdb_execute_prepared, ERL_NIF_DIRTY_JOB_IO_BOUND},
     {"execute_prepared_dirty_cpu_nif", 1, duxdb_execute_prepared, ERL_NIF_DIRTY_JOB_CPU_BOUND},
 
-    {"bind_boolean", 3, duxdb_bind_boolean},
-    {"bind_double", 3, duxdb_bind_double},
-    {"bind_int64", 3, duxdb_bind_int64},
-    {"bind_uint64", 3, duxdb_bind_uint64},
-    {"bind_varchar", 3, duxdb_bind_varchar},
-    {"bind_blob", 3, duxdb_bind_blob},
-    {"bind_date_nif", 3, duxdb_bind_date},
-    {"bind_null", 2, duxdb_bind_null},
+    {"bind_boolean", 3, duxdb_bind_boolean, 0},
+    {"bind_double", 3, duxdb_bind_double, 0},
+    {"bind_int64", 3, duxdb_bind_int64, 0},
+    {"bind_uint64", 3, duxdb_bind_uint64, 0},
+    {"bind_varchar", 3, duxdb_bind_varchar, 0},
+    {"bind_blob", 3, duxdb_bind_blob, 0},
+    {"bind_date_nif", 3, duxdb_bind_date, 0},
+    {"bind_null", 2, duxdb_bind_null, 0},
 };
 
 ERL_NIF_INIT(Elixir.DuxDB, nif_funcs, on_load, NULL, NULL, NULL)

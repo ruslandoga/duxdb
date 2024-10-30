@@ -1,0 +1,62 @@
+name: mix
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    env:
+      MIX_ENV: test
+
+    strategy:
+      matrix:
+        elixir: [1.17]
+        otp: [27]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: test-${{ matrix.otp }}-${{ matrix.elixir }}-${{ github.head_ref || github.ref }}-${{ hashFiles('**/mix.lock') }}
+          restore-keys: |
+            test-${{ matrix.otp }}-${{ matrix.elixir }}-${{ github.head_ref || github.ref }}-
+            test-${{ matrix.otp }}-${{ matrix.elixir }}-refs/heads/master-
+
+      - name: 🦆💿 INSTALLING DUCKDB (QUACK QUACK) 🦆💿
+        env:
+          DUCKDB_VERSION: v1.1.2
+          DUCKDB_ARCH: amd64
+        run: |
+          curl -L https://github.com/duckdb/duckdb/releases/download/${DUCKDB_VERSION}/libduckdb-linux-${DUCKDB_ARCH}.zip -o libduckdb.zip
+          unzip libduckdb.zip -d libduckdb
+
+      - run: mix deps.get --only $MIX_ENV
+      - run: mix compile --warnings-as-errors
+        env:
+          DUXDB_EXTRA_LDFLAGS: -L./libduckdb -Wl,-rpath=./libduckdb
+
+      - run: mix test
+
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: 1
+          otp-version: 27
+      - run: elixir -v
+      - run: mix format --check-formatted
