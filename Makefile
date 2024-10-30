@@ -31,14 +31,14 @@ endif
 all: $(PRIV) $(BUILD) $(LIB)
 
 $(LIB): $(BUILD)/duxdb_nif.o
-	@echo "LD $(notdir $@)"
+	@echo " LD $(notdir $@)"
 	$(CC) $(BUILD)/duxdb_nif.o $(LDFLAGS) $(DUXDB_LDFLAGS) -o $@
 
 $(PRIV) $(BUILD):
 	mkdir -p $@
 
 $(BUILD)/duxdb_nif.o: c_src/duxdb_nif.c
-	@echo "CC $(notdir $@)"
+	@echo " CC $(notdir $@)"
 	$(CC) $(CFLAGS) $(DUXDB_CFLAGS) -c c_src/duxdb_nif.c -o $@
 
 clean:
