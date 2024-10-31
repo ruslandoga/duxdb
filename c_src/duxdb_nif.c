@@ -569,9 +569,7 @@ duxdb_data_chunk_get_vector(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     duckdb_type type = duckdb_get_type_id(logical_type);
     duckdb_destroy_logical_type(&logical_type);
 
-    ERL_NIF_TERM *terms = enif_alloc(chunk_size * sizeof(ERL_NIF_TERM));
-    if (!terms)
-        return enif_raise_exception(env, am_system_limit);
+    ERL_NIF_TERM terms[chunk_size];
 
     // TODO refactor
     for (idx_t i = 0; i < chunk_size; i++)
@@ -831,9 +829,7 @@ duxdb_data_chunk_get_vector(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
         }
     }
 
-    ERL_NIF_TERM cells = enif_make_list_from_array(env, terms, chunk_size);
-    enif_free(terms);
-    return cells;
+    return enif_make_list_from_array(env, terms, chunk_size);
 }
 
 static ERL_NIF_TERM
