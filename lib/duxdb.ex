@@ -83,13 +83,9 @@ defmodule DuxDB do
   @spec build_config(config, Enumerable.t()) :: :ok
   defp build_config(config, options) do
     Enum.each(options, fn {name, option} ->
-      case set_config_nif(config, c_str(name), c_str(option)) do
-        :ok = ok ->
-          ok
-
-        :error ->
-          raise ArgumentError,
-            message: "unexpected config option #{inspect(options)} for #{inspect(name)}"
+      with :error <- set_config_nif(config, c_str(name), c_str(option)) do
+        raise ArgumentError,
+          message: "invalid config option #{inspect(options)} for #{inspect(name)}"
       end
     end)
   end
