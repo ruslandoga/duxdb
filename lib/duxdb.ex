@@ -2,11 +2,6 @@ defmodule DuxDB do
   @moduledoc "DuckDB in Elixir"
 
   @typedoc """
-  A reference to a DuckDB configuration NIF resource.
-  """
-  @type config :: reference
-
-  @typedoc """
   A reference to a DuckDB database NIF resource.
   """
   @type db :: reference
@@ -43,20 +38,6 @@ defmodule DuxDB do
   def library_version, do: :erlang.nif_error(:undef)
 
   @doc """
-  Initializes an empty configuration object that can be used to provide start-up options for a DuckDB instance.
-
-      iex> config = DuxDB.create_config()
-      iex> is_reference(config)
-      true
-
-  The configuration object is destroyed on garbage collection.
-
-  See https://duckdb.org/docs/api/c/api#duckdb_create_config
-  """
-  @spec create_config :: config
-  def create_config, do: :erlang.nif_error(:undef)
-
-  @doc """
   Returns the total amount of configuration options available.
 
       iex> DuxDB.config_count()
@@ -91,82 +72,86 @@ defmodule DuxDB do
   @spec get_config_flag(non_neg_integer) :: {name :: String.t(), description :: String.t()}
   def get_config_flag(_index), do: :erlang.nif_error(:undef)
 
-  @doc """
-  Sets the specified option for the specified configuration.
+  @typep config :: reference
 
-      iex> config = DuxDB.create_config()
-      iex> DuxDB.set_config(config, "access_mode", "READ_WRITE")
-      :ok
+  @spec create_config :: config
+  defp create_config, do: :erlang.nif_error(:undef)
 
-      iex> config = DuxDB.create_config()
-      iex> DuxDB.set_config(config, "access_mode", "EAT_LOVE")
-      :error
+  @spec destroy_config(config) :: :ok
+  defp destroy_config(_config), do: :erlang.nif_error(:undef)
 
-  See https://duckdb.org/docs/api/c/api#duckdb_set_config
-  """
-  @spec set_config(config, String.t(), String.t()) :: :ok | :error
-  def set_config(config, name, option) do
-    set_config_nif(config, c_str(name), c_str(option))
+  @spec build_config(config, Enumerable.t()) :: :ok
+  defp build_config(config, options) do
+    Enum.each(options, fn {name, option} ->
+      case set_config_nif(config, c_str(name), c_str(option)) do
+        :ok = ok ->
+          ok
+
+        :error ->
+          raise ArgumentError,
+            message: "unexpected config option #{inspect(options)} for #{inspect(name)}"
+      end
+    end)
   end
 
   defp set_config_nif(_config, _name, _option), do: :erlang.nif_error(:undef)
 
-  @doc """
-  Destroys the specified configuration object.
-
-      iex> config = DuxDB.create_config()
-      iex> DuxDB.destroy_config(config)
-      :ok
-
-  See https://duckdb.org/docs/api/c/api#duckdb_destroy_config
-  """
-  @spec destroy_config(config) :: :ok
-  def destroy_config(_config), do: :erlang.nif_error(:undef)
+  # TODO open/1 open/0
 
   @doc """
   Opens a DuckDB database with a configuration.
 
   > ### Runs on a main scheduler. {: .warning}
   >
-  > Opening an on-disk database can take a long time, consider using `open_ext_dirty_io/2` instead.
+  > Opening an on-disk database can take a long time, consider using `open_dirty_io/2` instead.
 
       iex> path = "test.db"
-      iex> config = DuxDB.create_config()
-      iex> :ok = DuxDB.set_config(config, "max_memory", "8GB")
-      iex> db = DuxDB.open_ext(path, config)
+      iex> db = DuxDB.open(path, _config = %{"max_memory" => "8GB"})
       iex> is_reference(db)
       true
 
       iex> bad_path = "/this/path/not/exists/test.db "
-      iex> DuxDB.open_ext(bad_path, DuxDB.create_config())
+      iex> DuxDB.open(bad_path, _config = [])
       ** (ArgumentError) IO Error: Cannot open file "/this/path/not/exists/test.db ": No such file or directory
 
   The database is closed with `close/1` or on garbage collection.
 
   See https://duckdb.org/docs/api/c/api#duckdb_open_ext
   """
-  @spec open_ext(Path.t(), config) :: db
-  def open_ext(path, config) do
-    case open_ext_nif(c_str(path), config) do
-      db when is_reference(db) -> db
-      error when is_binary(error) -> raise ArgumentError, message: error
+  @spec open(Path.t(), Enumerable.t()) :: db
+  def open(path, options) do
+    config = create_config()
+
+    try do
+      case open_ext_nif(c_str(path), build_config(config, options)) do
+        db when is_reference(db) -> db
+        error when is_binary(error) -> raise ArgumentError, message: error
+      end
+    after
+      destroy_config(config)
     end
   end
 
   defp open_ext_nif(_path, _config), do: :erlang.nif_error(:undef)
 
   @doc """
-  Same as `open_ext/2` but gets executed on a Dirty IO scheduler.
+  Same as `open/2` but gets executed on a Dirty IO scheduler.
   """
-  @spec open_ext_dirty_io(Path.t(), config) :: db
-  def open_ext_dirty_io(path, config) do
-    case open_ext_dirty_io_nif(c_str(path), config) do
-      db when is_reference(db) -> db
-      error when is_binary(error) -> raise ArgumentError, message: error
+  @spec open_dirty_io(Path.t(), Enumerable.t()) :: db
+  def open_dirty_io(path, options) do
+    config = create_config()
+
+    try do
+      case open_ext_dirty_io_nif(c_str(path), build_config(config, options)) do
+        db when is_reference(db) -> db
+        error when is_binary(error) -> raise ArgumentError, message: error
+      end
+    after
+      destroy_config(config)
     end
   end
 
-  defp open_ext_dirty_io_nif(_path, _config), do: :erlang.nif_error(:undef)
+  defp open_dirty_io_nif(_path, _config), do: :erlang.nif_error(:undef)
 
   @doc """
   Closes a DuckDB database.
@@ -175,7 +160,7 @@ defmodule DuxDB do
   >
   > Closing an on-disk database can take a long time, consider using `close_dirty_io/1` instead.
 
-      iex> db = DuxDB.open_ext(":memory:", DuxDB.create_config())
+      iex> db = DuxDB.open(":memory:", _config = [])
       iex> DuxDB.close(db)
       :ok
 
@@ -193,7 +178,7 @@ defmodule DuxDB do
   @doc """
   Connects to a DuckDB database.
 
-      iex> db = DuxDB.open_ext(":memory:", DuxDB.create_config())
+      iex> db = DuxDB.open(":memory:", _config = [])
       iex> conn = DuxDB.connect(db)
       iex> is_reference(conn)
       true
@@ -208,7 +193,7 @@ defmodule DuxDB do
   @doc """
   Interrupts a running query.
 
-      iex> db = DuxDB.open_ext(":memory:", DuxDB.create_config())
+      iex> db = DuxDB.open(":memory:", _config = [])
       iex> conn = DuxDB.connect(db)
       iex> DuxDB.interrupt(conn)
       :ok
@@ -221,7 +206,7 @@ defmodule DuxDB do
   @doc """
   Gets progress of the running query.
 
-      iex> db = DuxDB.open_ext(":memory:", DuxDB.create_config())
+      iex> db = DuxDB.open(":memory:", _config = [])
       iex> conn = DuxDB.connect(db)
       iex> DuxDB.query_progress(conn)
       {_percentage = -1.0, _rows_processed = 0, _total_rows_to_process = 0}
@@ -239,7 +224,7 @@ defmodule DuxDB do
   @doc """
   Disconnects from a DuckDB database.
 
-      iex> db = DuxDB.open_ext(":memory:", DuxDB.create_config())
+      iex> db = DuxDB.open(":memory:", _config = [])
       iex> conn = DuxDB.connect(db)
       iex> DuxDB.disconnect(conn)
       :ok
@@ -268,12 +253,12 @@ defmodule DuxDB do
   > Executing a lengthy query can degrade the VM's responsiveness.
   > If you expect the query to take longer than 1 millisecond, consider using `query_dirty_cpu/2` or `query_dirty_io/2` instead.
 
-      iex> conn = DuxDB.connect(DuxDB.open_ext(":memory:", DuxDB.create_config()))
+      iex> conn = DuxDB.connect(DuxDB.open(":memory:", _config = []))
       iex> result = DuxDB.query(conn, "SELECT 42")
       iex> is_reference(result)
       true
 
-      iex> conn = DuxDB.connect(DuxDB.open_ext(":memory:", DuxDB.create_config()))
+      iex> conn = DuxDB.connect(DuxDB.open(":memory:", _config = []))
       iex> DuxDB.query(conn, "SEL 42")
       ** (DuxDB.Error) Parser Error: syntax error at or near "SEL"
       LINE 1: SEL 42
@@ -322,7 +307,7 @@ defmodule DuxDB do
   @doc """
   Closes the result and de-allocates all memory allocated for that connection.
 
-      iex> conn = DuxDB.connect(DuxDB.open_ext(":memory:", DuxDB.create_config()))
+      iex> conn = DuxDB.connect(DuxDB.open(":memory:", _config = []))
       iex> result = DuxDB.query(conn, "SELECT 42")
       iex> DuxDB.destroy_result(result)
       :ok
@@ -335,12 +320,12 @@ defmodule DuxDB do
   @doc """
   Returns the column name of the specified column. Returns `nil` if the column is out of range.
 
-      iex> conn = DuxDB.connect(DuxDB.open_ext(":memory:", DuxDB.create_config()))
+      iex> conn = DuxDB.connect(DuxDB.open(":memory:", _config = []))
       iex> result = DuxDB.query(conn, "SELECT 42 AS answer")
       iex> DuxDB.column_name(result, 0)
       "answer"
 
-      iex> conn = DuxDB.connect(DuxDB.open_ext(":memory:", DuxDB.create_config()))
+      iex> conn = DuxDB.connect(DuxDB.open(":memory:", _config = []))
       iex> result = DuxDB.query(conn, "SELECT 42 AS answer")
       iex> DuxDB.column_name(result, 1)
       nil
@@ -353,7 +338,7 @@ defmodule DuxDB do
   @doc """
   Returns the statement type of the statement that was executed.
 
-      iex> conn = DuxDB.connect(DuxDB.open_ext(":memory:", DuxDB.create_config()))
+      iex> conn = DuxDB.connect(DuxDB.open(":memory:", _config = []))
       iex> result = DuxDB.query(conn, "SELECT 42 AS answer")
       iex> DuxDB.result_statement_type(result)
       _select = 1
@@ -366,7 +351,7 @@ defmodule DuxDB do
   @doc """
   Returns the number of columns present in a the result object.
 
-      iex> conn = DuxDB.connect(DuxDB.open_ext(":memory:", DuxDB.create_config()))
+      iex> conn = DuxDB.connect(DuxDB.open(":memory:", _config = []))
       iex> result = DuxDB.query(conn, "SELECT 42 AS answer, 'six times seven' AS question")
       iex> DuxDB.column_count(result)
       2
@@ -381,7 +366,7 @@ defmodule DuxDB do
   This is relevant only for INSERT/UPDATE/DELETE queries.
   For other queries the rows_changed will be 0.
 
-      iex> conn = DuxDB.connect(DuxDB.open_ext(":memory:", DuxDB.create_config()))
+      iex> conn = DuxDB.connect(DuxDB.open(":memory:", _config = []))
       iex> result = DuxDB.query(conn, "SELECT 42 AS answer, 'six times seven' AS question")
       iex> DuxDB.rows_changed(result)
       0
@@ -394,7 +379,7 @@ defmodule DuxDB do
   @doc """
   Returns the return_type of the given result.
 
-      iex> conn = DuxDB.connect(DuxDB.open_ext(":memory:", DuxDB.create_config()))
+      iex> conn = DuxDB.connect(DuxDB.open(":memory:", _config = []))
       iex> result = DuxDB.query(conn, "SELECT 42")
       iex> DuxDB.result_return_type(result)
       _query_result = 3
@@ -407,7 +392,7 @@ defmodule DuxDB do
   @doc """
   Fetches the next chunk of data from the result.
 
-      iex> conn = DuxDB.connect(DuxDB.open_ext(":memory:", DuxDB.create_config()))
+      iex> conn = DuxDB.connect(DuxDB.open(":memory:", _config = []))
       iex> chunk = DuxDB.fetch_chunk(DuxDB.query(conn, "SELECT 42 AS answer"))
       iex> is_reference(chunk)
       true
@@ -425,7 +410,7 @@ defmodule DuxDB do
   @doc """
   Destroys the data chunk and de-allocates all memory allocated for that chunk.
 
-      iex> conn = DuxDB.connect(DuxDB.open_ext(":memory:", DuxDB.create_config()))
+      iex> conn = DuxDB.connect(DuxDB.open(":memory:", _config = []))
       iex> chunk = DuxDB.fetch_chunk(DuxDB.query(conn, "SELECT 42 AS answer"))
       iex> DuxDB.destroy_data_chunk(chunk)
       :ok
@@ -438,7 +423,7 @@ defmodule DuxDB do
   @doc """
   Retrieves the number of columns in a data chunk.
 
-      iex> conn = DuxDB.connect(DuxDB.open_ext(":memory:", DuxDB.create_config()))
+      iex> conn = DuxDB.connect(DuxDB.open(":memory:", _config = []))
       iex> chunk = DuxDB.fetch_chunk(DuxDB.query(conn, "SELECT 42 AS answer, 'six times seven' AS question"))
       iex> DuxDB.data_chunk_get_column_count(chunk)
       2
@@ -453,7 +438,7 @@ defmodule DuxDB do
   @doc """
   Retrieves the vector (as a list) at the specified column index in the data chunk.
 
-      iex> conn = DuxDB.connect(DuxDB.open_ext(":memory:", DuxDB.create_config()))
+      iex> conn = DuxDB.connect(DuxDB.open(":memory:", _config = []))
       iex> sql = \"""
       ...> SELECT * FROM (VALUES
       ...>   (1, 'Alice', DATE '2023-01-01', TRUE),
@@ -484,12 +469,12 @@ defmodule DuxDB do
   >
   > If you expect `duckdb_prepare` to take a long time, consider using `prepare_dirty_cpu/2` instead.
 
-      iex> conn = DuxDB.connect(DuxDB.open_ext(":memory:", DuxDB.create_config()))
+      iex> conn = DuxDB.connect(DuxDB.open(":memory:", _config = []))
       iex> stmt = DuxDB.prepare(conn, "SELECT ?")
       iex> is_reference(stmt)
       true
 
-      iex> conn = DuxDB.connect(DuxDB.open_ext(":memory:", DuxDB.create_config()))
+      iex> conn = DuxDB.connect(DuxDB.open(":memory:", _config = []))
       iex> DuxDB.prepare(conn, "SEL ?")
       ** (ArgumentError) Parser Error: syntax error at or near "SEL"
       LINE 1: SEL ?
@@ -525,7 +510,7 @@ defmodule DuxDB do
   @doc """
   Destroys the prepared statement object.
 
-      iex> conn = DuxDB.connect(DuxDB.open_ext(":memory:", DuxDB.create_config()))
+      iex> conn = DuxDB.connect(DuxDB.open(":memory:", _config = []))
       iex> stmt = DuxDB.prepare(conn, "SELECT ?")
       iex> DuxDB.destroy_prepare(stmt)
       :ok
@@ -538,7 +523,7 @@ defmodule DuxDB do
   @doc """
   Returns the number of parameters that can be provided to the given prepared statement.
 
-      iex> conn = DuxDB.connect(DuxDB.open_ext(":memory:", DuxDB.create_config()))
+      iex> conn = DuxDB.connect(DuxDB.open(":memory:", _config = []))
       iex> stmt = DuxDB.prepare(conn, "SELECT ?, ?")
       iex> DuxDB.nparams(stmt)
       2
@@ -551,7 +536,7 @@ defmodule DuxDB do
   @doc """
   Returns the name used to identify the parameter.
 
-      iex> conn = DuxDB.connect(DuxDB.open_ext(":memory:", DuxDB.create_config()))
+      iex> conn = DuxDB.connect(DuxDB.open(":memory:", _config = []))
       iex> stmt = DuxDB.prepare(conn, "SELECT $a, $b")
       iex> [DuxDB.parameter_name(stmt, 1), DuxDB.parameter_name(stmt, 2)]
       ["a", "b"]
@@ -564,7 +549,7 @@ defmodule DuxDB do
   @doc """
   Retrieves the index of the parameter for the prepared statement, identified by name.
 
-      iex> conn = DuxDB.connect(DuxDB.open_ext(":memory:", DuxDB.create_config()))
+      iex> conn = DuxDB.connect(DuxDB.open(":memory:", _config = []))
       iex> stmt = DuxDB.prepare(conn, "SELECT $name")
       iex> DuxDB.bind_parameter_index(stmt, "name")
       1
@@ -581,7 +566,7 @@ defmodule DuxDB do
   @doc """
   Clears the params bind to the prepared statement.
 
-      iex> conn = DuxDB.connect(DuxDB.open_ext(":memory:", DuxDB.create_config()))
+      iex> conn = DuxDB.connect(DuxDB.open(":memory:", _config = []))
       iex> stmt = DuxDB.prepare(conn, "SELECT ?")
       iex> DuxDB.clear_bindings(stmt)
       :ok
@@ -594,7 +579,7 @@ defmodule DuxDB do
   @doc """
   Returns the statement type of the statement to be executed.
 
-      iex> conn = DuxDB.connect(DuxDB.open_ext(":memory:", DuxDB.create_config()))
+      iex> conn = DuxDB.connect(DuxDB.open(":memory:", _config = []))
       iex> stmt = DuxDB.prepare(conn, "SELECT 42")
       iex> DuxDB.prepared_statement_type(stmt)
       _select = 1
@@ -612,7 +597,7 @@ defmodule DuxDB do
   > Executing a lengthy prepared statement can degrade the VM's responsiveness.
   > If you expect the prepared statement to take longer than 1 millisecond, consider using `execute_prepared_dirty_cpu/2` or `execute_prepared_dirty_io/2` instead.
 
-      iex> conn = DuxDB.connect(DuxDB.open_ext(":memory:", DuxDB.create_config()))
+      iex> conn = DuxDB.connect(DuxDB.open(":memory:", _config = []))
       iex> result = DuxDB.execute_prepared(DuxDB.prepare(conn, "SELECT 42"))
       iex> is_reference(result)
       true
@@ -660,7 +645,7 @@ defmodule DuxDB do
   @doc """
   Binds a boolean value to the specified parameter index.
 
-      iex> conn = DuxDB.connect(DuxDB.open_ext(":memory:", DuxDB.create_config()))
+      iex> conn = DuxDB.connect(DuxDB.open(":memory:", _config = []))
       iex> stmt = DuxDB.prepare(conn, "SELECT ?")
       iex> DuxDB.bind_boolean(stmt, 1, true)
       :ok
@@ -673,7 +658,7 @@ defmodule DuxDB do
   @doc """
   Binds a floating point number to the specified parameter index.
 
-      iex> conn = DuxDB.connect(DuxDB.open_ext(":memory:", DuxDB.create_config()))
+      iex> conn = DuxDB.connect(DuxDB.open(":memory:", _config = []))
       iex> stmt = DuxDB.prepare(conn, "SELECT ?")
       iex> DuxDB.bind_double(stmt, 1, 3.14)
       :ok
@@ -686,7 +671,7 @@ defmodule DuxDB do
   @doc """
   Binds a signed 64-bit integer to the specified parameter index.
 
-      iex> conn = DuxDB.connect(DuxDB.open_ext(":memory:", DuxDB.create_config()))
+      iex> conn = DuxDB.connect(DuxDB.open(":memory:", _config = []))
       iex> stmt = DuxDB.prepare(conn, "SELECT ?")
       iex> DuxDB.bind_int64(stmt, 1, -3)
       :ok
@@ -699,7 +684,7 @@ defmodule DuxDB do
   @doc """
   Binds an unsigned 64-bit integer to the specified parameter index.
 
-      iex> conn = DuxDB.connect(DuxDB.open_ext(":memory:", DuxDB.create_config()))
+      iex> conn = DuxDB.connect(DuxDB.open(":memory:", _config = []))
       iex> stmt = DuxDB.prepare(conn, "SELECT ?")
       iex> DuxDB.bind_uint64(stmt, 1, 3)
       :ok
@@ -712,7 +697,7 @@ defmodule DuxDB do
   @doc """
   Binds a text value to the specified parameter index.
 
-      iex> conn = DuxDB.connect(DuxDB.open_ext(":memory:", DuxDB.create_config()))
+      iex> conn = DuxDB.connect(DuxDB.open(":memory:", _config = []))
       iex> stmt = DuxDB.prepare(conn, "SELECT ?")
       iex> DuxDB.bind_varchar(stmt, 1, "hello, world")
       :ok
@@ -725,7 +710,7 @@ defmodule DuxDB do
   @doc """
   Binds a binary blob to the specified parameter index.
 
-      iex> conn = DuxDB.connect(DuxDB.open_ext(":memory:", DuxDB.create_config()))
+      iex> conn = DuxDB.connect(DuxDB.open(":memory:", _config = []))
       iex> stmt = DuxDB.prepare(conn, "SELECT ?")
       iex> DuxDB.bind_blob(stmt, 1, <<1, 2, 3>>)
       :ok
@@ -740,7 +725,7 @@ defmodule DuxDB do
   @doc """
   Binds a date (as days since 1970-01-01) to the specified parameter index.
 
-      iex> conn = DuxDB.connect(DuxDB.open_ext(":memory:", DuxDB.create_config()))
+      iex> conn = DuxDB.connect(DuxDB.open(":memory:", _config = []))
       iex> stmt = DuxDB.prepare(conn, "SELECT ?")
       iex> DuxDB.bind_date(stmt, 1, ~D[2023-01-01])
       :ok
@@ -759,7 +744,7 @@ defmodule DuxDB do
   @doc """
   Binds a NULL value to the specified parameter index.
 
-      iex> conn = DuxDB.connect(DuxDB.open_ext(":memory:", DuxDB.create_config()))
+      iex> conn = DuxDB.connect(DuxDB.open(":memory:", _config = []))
       iex> stmt = DuxDB.prepare(conn, "SELECT ?")
       iex> DuxDB.bind_null(stmt, 1)
       :ok
