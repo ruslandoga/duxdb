@@ -829,7 +829,8 @@ duxdb_data_chunk_get_vector(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
         }
     }
 
-    return enif_make_list_from_array(env, terms, chunk_size);
+    return enif_make_tuple_from_array(env, terms, chunk_size);
+    // return enif_make_list_from_array(env, terms, chunk_size);
 }
 
 static ERL_NIF_TERM
