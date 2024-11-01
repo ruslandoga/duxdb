@@ -3,43 +3,23 @@ defmodule DuxDBTest do
   use ExUnitProperties
   doctest DuxDB
 
-  describe "destroy_config/1" do
-    setup do
-      {:ok, config: DuxDB.create_config()}
-    end
-
-    test "is no-op if already destroyed", %{config: config} do
-      assert :ok == DuxDB.destroy_config(config)
-      assert :ok == DuxDB.destroy_config(config)
-    end
-
-    test "fails future operations", %{config: config} do
-      assert :ok == DuxDB.destroy_config(config)
-      assert_raise ArgumentError, fn -> DuxDB.set_config(config, "access_mode", "READ_WRITE") end
-      assert_raise ArgumentError, fn -> DuxDB.open_ext(":memory:", config) end
-    end
-  end
-
-  describe "open_ext/2" do
+  describe "open/2" do
     test "fails on broken config" do
-      config = DuxDB.create_config()
-      assert :ok == DuxDB.set_config(config, "sdf", "asdf")
-
       assert_raise ArgumentError,
                    "Invalid Input Error: The following options were not recognized: sdf",
-                   fn -> DuxDB.open_ext(":memory:", config) end
+                   fn -> DuxDB.open(":memory:", %{"sdf" => "asdf"}) end
     end
 
     test "fails on invalid path" do
       assert_raise ArgumentError,
                    "IO Error: Cannot open file \"tmp/somewhere/test.db\": No such file or directory",
-                   fn -> DuxDB.open_ext("tmp/somewhere/test.db", DuxDB.create_config()) end
+                   fn -> DuxDB.open("tmp/somewhere/test.db", []) end
     end
   end
 
   describe "close/1" do
     setup do
-      {:ok, db: DuxDB.open_ext(":memory:", DuxDB.create_config())}
+      {:ok, db: DuxDB.open(":memory:", [])}
     end
 
     test "is no-op if already closed", %{db: db} do
@@ -55,7 +35,7 @@ defmodule DuxDBTest do
 
   describe "disconnect/1" do
     setup do
-      {:ok, conn: DuxDB.connect(DuxDB.open_ext(":memory:", DuxDB.create_config()))}
+      {:ok, conn: DuxDB.connect(DuxDB.open(":memory:", []))}
     end
 
     test "is no-op if already disconnected", %{conn: conn} do
@@ -66,7 +46,7 @@ defmodule DuxDBTest do
 
   describe "bind and fetch" do
     setup do
-      {:ok, conn: DuxDB.connect(DuxDB.open_ext(":memory:", DuxDB.create_config()))}
+      {:ok, conn: DuxDB.connect(DuxDB.open(":memory:", []))}
     end
 
     property "bool, text, blob, int, float and null", %{conn: conn} do

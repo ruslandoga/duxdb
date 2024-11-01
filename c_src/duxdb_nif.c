@@ -1160,10 +1160,11 @@ duxdb_bind_null(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 static ErlNifFunc nif_funcs[] = {
     {"library_version", 0, duxdb_library_version, 0},
 
-    {"create_config", 0, duxdb_create_config, 0},
     {"config_count", 0, duxdb_config_count, 0},
     {"get_config_flag", 1, duxdb_get_config_flag, 0},
-    {"set_config_nif", 3, duxdb_set_config, 0},
+
+    {"create_config", 0, duxdb_create_config, 0},
+    {"set_config", 3, duxdb_set_config, 0},
     {"destroy_config", 1, duxdb_destroy_config, 0},
 
     {"open_ext_nif", 2, duxdb_open_ext, 0},

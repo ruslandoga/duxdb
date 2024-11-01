@@ -23,10 +23,7 @@ Mix.install([
   {:duxdb, github: "ruslandoga/duxdb"}
 ])
 
-config = DuxDB.create_config()
-DuxDB.set_config(config, "max_memory", "1GB")
-
-db = DuxDB.open_ext(":memory:", config)
+db = DuxDB.open(":memory:", %{"max_memory" => "1GB"})
 conn = DuxDB.connect(db)
 
 stmt = DuxDB.prepare(conn, """
