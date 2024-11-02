@@ -1,0 +1,20 @@
+- maybe don't expose result and data_chunk, just fetch it all, the results are materialized in DuckDB anyway, no need to step through them
+- open/0
+- param_type/2
+- execute_prepared_streaming
+- extract_statements
+- prepare_extracted_statement
+- pending_prepared
+- stream_fetch_chunk
+- bind_hugeint
+- bind_uhugeint
+- bind_decimal
+- bind_list? create_list_value ->
+- bind_union
+- bind_enum
+- bind_timestamp
+- bind_timestamp_tz
+- bind_interval
+- get_profiling_info
+- appender (also with chunks)
+- table_description
