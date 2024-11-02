@@ -55,6 +55,7 @@ defmodule DuxDBTest do
           conn,
           """
           select
+            $date as date,
             $bool as bool,
             $text as text,
             $blob as blob,
@@ -74,6 +75,8 @@ defmodule DuxDBTest do
               u64 <- non_negative_integer(),
               f64 <- float()
             ) do
+        date = Date.add(Date.utc_today(), i64)
+
         DuxDB.bind_boolean(stmt, DuxDB.bind_parameter_index(stmt, "bool"), bool)
         DuxDB.bind_varchar(stmt, DuxDB.bind_parameter_index(stmt, "text"), text)
         DuxDB.bind_blob(stmt, DuxDB.bind_parameter_index(stmt, "blob"), blob)
@@ -81,6 +84,7 @@ defmodule DuxDBTest do
         DuxDB.bind_uint64(stmt, DuxDB.bind_parameter_index(stmt, "u64"), u64)
         DuxDB.bind_double(stmt, DuxDB.bind_parameter_index(stmt, "f64"), f64)
         DuxDB.bind_null(stmt, DuxDB.bind_parameter_index(stmt, "null"))
+        DuxDB.bind_date(stmt, DuxDB.bind_parameter_index(stmt, "date"), date)
 
         result = DuxDB.execute_prepared(stmt)
 
@@ -92,7 +96,8 @@ defmodule DuxDBTest do
                    "i64" => [i64],
                    "null" => [nil],
                    "text" => [text],
-                   "u64" => [u64]
+                   "u64" => [u64],
+                   "date" => [date]
                  }
                ]
       end
