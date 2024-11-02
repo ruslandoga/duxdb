@@ -79,9 +79,6 @@ defmodule DuxDB do
     config
   end
 
-  # TODO open/0
-  # TODO don't create config in open/1
-
   @doc """
   Same as `open/2` but without config.
   """
@@ -369,9 +366,6 @@ defmodule DuxDB do
   @spec fetch_chunk(result) :: data_chunk | nil
   def fetch_chunk(_result), do: :erlang.nif_error(:undef)
 
-  # TODO https://duckdb.org/docs/api/c/data_chunk#duckdb_create_data_chunk
-  # TODO https://duckdb.org/docs/api/c/data_chunk#duckdb_data_chunk_reset
-
   @doc """
   Destroys the data chunk and de-allocates all memory allocated for that chunk.
 
@@ -397,8 +391,6 @@ defmodule DuxDB do
   """
   @spec data_chunk_get_column_count(data_chunk) :: non_neg_integer
   def data_chunk_get_column_count(_data_chunk), do: :erlang.nif_error(:undef)
-
-  # TODO vector resource + DuxDB.vector_to_list(vector)?
 
   @doc """
   Retrieves the vector (as a list) at the specified column index in the data chunk.
@@ -721,7 +713,6 @@ defmodule DuxDB do
   @spec bind_null(stmt, non_neg_integer) :: :ok
   def bind_null(_stmt, _idx), do: :erlang.nif_error(:undef)
 
-  # TODO find a cleaner way
   @compile inline: [c_str: 1]
   defp c_str(b) when is_binary(b), do: [b, 0]
 
