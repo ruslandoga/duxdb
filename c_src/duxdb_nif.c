@@ -1,6 +1,5 @@
 #include <assert.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <string.h>
 #include <erl_nif.h>
 #include <duckdb.h>
