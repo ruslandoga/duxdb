@@ -72,12 +72,9 @@ defmodule DuxDB do
   @spec get_config_flag(non_neg_integer) :: {name :: String.t(), description :: String.t()}
   def get_config_flag(_index), do: :erlang.nif_error(:undef)
 
-  @doc false
-  def create_config, do: :erlang.nif_error(:undef)
-  @doc false
-  def set_config(_config, _name, _option), do: :erlang.nif_error(:undef)
-  @doc false
-  def destroy_config(_config), do: :erlang.nif_error(:undef)
+  defp create_config, do: :erlang.nif_error(:undef)
+  defp set_config(_config, _name, _option), do: :erlang.nif_error(:undef)
+  defp destroy_config(_config), do: :erlang.nif_error(:undef)
 
   defp build_config(config, options) do
     Enum.each(options, fn {name, option} ->
