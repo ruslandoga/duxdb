@@ -72,9 +72,12 @@ defmodule DuxDB do
   @spec get_config_flag(non_neg_integer) :: {name :: String.t(), description :: String.t()}
   def get_config_flag(_index), do: :erlang.nif_error(:undef)
 
-  defp create_config, do: :erlang.nif_error(:undef)
-  defp set_config(_config, _name, _option), do: :erlang.nif_error(:undef)
-  defp destroy_config(_config), do: :erlang.nif_error(:undef)
+  @doc false
+  def create_config, do: :erlang.nif_error(:undef)
+  @doc false
+  def set_config(_config, _name, _option), do: :erlang.nif_error(:undef)
+  @doc false
+  def destroy_config(_config), do: :erlang.nif_error(:undef)
 
   defp build_config(config, options) do
     Enum.each(options, fn {name, option} ->
@@ -99,10 +102,6 @@ defmodule DuxDB do
   @doc """
   Opens a DuckDB database with a configuration.
 
-  > ### Runs on a main scheduler. {: .warning}
-  >
-  > Opening an on-disk database can take a long time, consider using `open_dirty_io/2` instead.
-
       iex> path = "test.db"
       iex> db = DuxDB.open(path, _config = %{"max_memory" => "8GB"})
       iex> is_reference(db)
@@ -121,7 +120,7 @@ defmodule DuxDB do
     config = create_config()
 
     try do
-      case open_ext_nif(c_str(path), build_config(config, options)) do
+      case open_ext(c_str(path), build_config(config, options)) do
         db when is_reference(db) -> db
         error when is_binary(error) -> raise ArgumentError, message: error
       end
@@ -130,32 +129,7 @@ defmodule DuxDB do
     end
   end
 
-  defp open_ext_nif(_path, _config), do: :erlang.nif_error(:undef)
-
-  @doc """
-  Same as `open_dirty_io/2` but without config.
-  """
-  @spec open_dirty_io(Path.t()) :: db
-  def open_dirty_io(path), do: open_dirty_io(path, _config = [])
-
-  @doc """
-  Same as `open/2` but gets executed on a Dirty IO scheduler.
-  """
-  @spec open_dirty_io(Path.t(), Enumerable.t()) :: db
-  def open_dirty_io(path, options) do
-    config = create_config()
-
-    try do
-      case open_ext_dirty_io_nif(c_str(path), build_config(config, options)) do
-        db when is_reference(db) -> db
-        error when is_binary(error) -> raise ArgumentError, message: error
-      end
-    after
-      destroy_config(config)
-    end
-  end
-
-  defp open_ext_dirty_io_nif(_path, _config), do: :erlang.nif_error(:undef)
+  defp open_ext(_path, _config), do: :erlang.nif_error(:undef)
 
   @doc """
   Closes a DuckDB database.
@@ -172,12 +146,6 @@ defmodule DuxDB do
   """
   @spec close(db) :: :ok
   def close(_db), do: :erlang.nif_error(:undef)
-
-  @doc """
-  Same as `close/1` but gets executed on a Dirty IO scheduler.
-  """
-  @spec close_dirty_io(db) :: :ok
-  def close_dirty_io(_db), do: :erlang.nif_error(:undef)
 
   @doc """
   Connects to a DuckDB database.
@@ -469,10 +437,6 @@ defmodule DuxDB do
   @doc """
   Creates a prepared statement object from a query.
 
-  > ### Runs on a main scheduler. {: .warning}
-  >
-  > If you expect `duckdb_prepare` to take a long time, consider using `prepare_dirty_cpu/2` instead.
-
       iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
       iex> stmt = DuxDB.prepare(conn, "SELECT ?")
       iex> is_reference(stmt)
@@ -497,19 +461,6 @@ defmodule DuxDB do
   end
 
   defp prepare_nif(_conn, _sql), do: :erlang.nif_error(:undef)
-
-  @doc """
-  Same as `prepare/2` but gets executed on a Dirty CPU scheduler.
-  """
-  @spec prepare_dirty_cpu(conn, String.t()) :: stmt
-  def prepare_dirty_cpu(conn, sql) do
-    case prepare_dirty_cpu_nif(conn, c_str(sql)) do
-      stmt when is_reference(stmt) -> stmt
-      error -> raise ArgumentError, message: error
-    end
-  end
-
-  defp prepare_dirty_cpu_nif(_conn, _sql), do: :erlang.nif_error(:undef)
 
   @doc """
   Destroys the prepared statement object.

@@ -1163,21 +1163,23 @@ static ErlNifFunc nif_funcs[] = {
     {"config_count", 0, duxdb_config_count, 0},
     {"get_config_flag", 1, duxdb_get_config_flag, 0},
 
-    {"create_config", 0, duxdb_create_config, 0},
-    {"set_config", 3, duxdb_set_config, 0},
-    {"destroy_config", 1, duxdb_destroy_config, 0},
+    // The create_config function is typically called first and can take a
+    // significant amount of time on the initial call, likely due to the library
+    // initialization or resource loading it triggers. For this reason, it is
+    // scheduled as a CPU-bound dirty job to avoid blocking the main Erlang scheduler.
+    {"create_config", 0, duxdb_create_config, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+    {"set_config", 3, duxdb_set_config, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+    {"destroy_config", 1, duxdb_destroy_config, ERL_NIF_DIRTY_JOB_CPU_BOUND},
 
-    {"open_ext_nif", 2, duxdb_open_ext, 0},
-    {"open_ext_dirty_io_nif", 2, duxdb_open_ext, ERL_NIF_DIRTY_JOB_IO_BOUND},
-
-    {"close", 1, duxdb_close, 0},
-    {"close_dirty_io", 1, duxdb_close, ERL_NIF_DIRTY_JOB_IO_BOUND},
+    {"open_ext", 2, duxdb_open_ext, ERL_NIF_DIRTY_JOB_IO_BOUND},
+    {"close", 1, duxdb_close, ERL_NIF_DIRTY_JOB_IO_BOUND},
 
     {"connect", 1, duxdb_connect, 0},
     {"interrupt", 1, duxdb_interrupt, 0},
     {"query_progress", 1, duxdb_query_progress, 0},
     {"disconnect", 1, duxdb_disconnect, 0},
 
+    // TODO remove, leave dirty only
     {"query_nif", 2, duxdb_query, 0},
     {"query_dirty_io_nif", 2, duxdb_query, ERL_NIF_DIRTY_JOB_IO_BOUND},
     {"query_dirty_cpu_nif", 2, duxdb_query, ERL_NIF_DIRTY_JOB_CPU_BOUND},
@@ -1190,12 +1192,12 @@ static ErlNifFunc nif_funcs[] = {
     {"result_return_type", 1, duxdb_result_return_type, 0},
 
     {"fetch_chunk", 1, duxdb_fetch_chunk, 0},
+    // TODO destoy once empty
     {"destroy_data_chunk", 1, duxdb_destroy_data_chunk, 0},
     {"data_chunk_get_column_count", 1, duxdb_data_chunk_get_column_count, 0},
     {"data_chunk_get_vector", 2, duxdb_data_chunk_get_vector, 0},
 
-    {"prepare_nif", 2, duxdb_prepare_nif, 0},
-    {"prepare_dirty_cpu_nif", 2, duxdb_prepare_nif, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+    {"prepare_nif", 2, duxdb_prepare_nif, ERL_NIF_DIRTY_JOB_CPU_BOUND},
 
     {"destroy_prepare", 1, duxdb_destroy_prepare, 0},
     {"nparams", 1, duxdb_nparams, 0},
@@ -1204,6 +1206,7 @@ static ErlNifFunc nif_funcs[] = {
     {"clear_bindings", 1, duxdb_clear_bindings, 0},
     {"prepared_statement_type", 1, duxdb_prepared_statement_type, 0},
 
+    // TODO remove, leave dirty only
     {"execute_prepared_nif", 1, duxdb_execute_prepared, 0},
     {"execute_prepared_dirty_io_nif", 1, duxdb_execute_prepared, ERL_NIF_DIRTY_JOB_IO_BOUND},
     {"execute_prepared_dirty_cpu_nif", 1, duxdb_execute_prepared, ERL_NIF_DIRTY_JOB_CPU_BOUND},
