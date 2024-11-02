@@ -992,7 +992,7 @@ duxdb_bind_boolean(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     if (!enif_get_uint64(env, argv[1], &idx))
         return make_badarg(env, argv[1]);
 
-    // TODO
+    // TODO refactor
     duckdb_state rc;
     if (enif_is_identical(argv[2], am_true))
     {
@@ -1024,11 +1024,8 @@ duxdb_bind_double(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     if (!enif_get_uint64(env, argv[1], &idx))
         return make_badarg(env, argv[1]);
 
-    double value;
-    if (!enif_get_double(env, argv[2], &value))
-        return make_badarg(env, argv[2]);
-
-    if (duckdb_bind_double(stmt->duck, idx, value) == DuckDBError)
+    double f64;
+    if (!enif_get_double(env, argv[2], &f64) || duckdb_bind_double(stmt->duck, idx, f64) == DuckDBError)
         return make_badarg(env, argv[2]);
 
     return am_ok;
@@ -1045,11 +1042,8 @@ duxdb_bind_int64(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     if (!enif_get_uint64(env, argv[1], &idx))
         return make_badarg(env, argv[1]);
 
-    ErlNifSInt64 value;
-    if (!enif_get_int64(env, argv[2], &value))
-        return make_badarg(env, argv[2]);
-
-    if (duckdb_bind_int64(stmt->duck, idx, value) == DuckDBError)
+    ErlNifSInt64 i64;
+    if (!enif_get_int64(env, argv[2], &i64) || duckdb_bind_int64(stmt->duck, idx, i64) == DuckDBError)
         return make_badarg(env, argv[2]);
 
     return am_ok;
@@ -1066,11 +1060,8 @@ duxdb_bind_uint64(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     if (!enif_get_uint64(env, argv[1], &idx))
         return make_badarg(env, argv[1]);
 
-    ErlNifUInt64 value;
-    if (!enif_get_uint64(env, argv[2], &value))
-        return make_badarg(env, argv[2]);
-
-    if (duckdb_bind_uint64(stmt->duck, idx, value) == DuckDBError)
+    ErlNifUInt64 u64;
+    if (!enif_get_uint64(env, argv[2], &u64) || duckdb_bind_uint64(stmt->duck, idx, u64) == DuckDBError)
         return make_badarg(env, argv[2]);
 
     return am_ok;
@@ -1088,10 +1079,7 @@ duxdb_bind_varchar(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
         return make_badarg(env, argv[1]);
 
     ErlNifBinary value;
-    if (!enif_inspect_binary(env, argv[2], &value))
-        return make_badarg(env, argv[2]);
-
-    if (duckdb_bind_varchar_length(stmt->duck, idx, (const char *)value.data, value.size) == DuckDBError)
+    if (!enif_inspect_binary(env, argv[2], &value) || duckdb_bind_varchar_length(stmt->duck, idx, (const char *)value.data, value.size) == DuckDBError)
         return make_badarg(env, argv[2]);
 
     return am_ok;
@@ -1109,10 +1097,7 @@ duxdb_bind_blob(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
         return make_badarg(env, argv[1]);
 
     ErlNifBinary value;
-    if (!enif_inspect_binary(env, argv[2], &value))
-        return make_badarg(env, argv[2]);
-
-    if (duckdb_bind_blob(stmt->duck, idx, (const char *)value.data, value.size) == DuckDBError)
+    if (!enif_inspect_binary(env, argv[2], &value) || duckdb_bind_blob(stmt->duck, idx, (const char *)value.data, value.size) == DuckDBError)
         return make_badarg(env, argv[2]);
 
     return am_ok;
@@ -1130,11 +1115,7 @@ duxdb_bind_date(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
         return make_badarg(env, argv[1]);
 
     ErlNifSInt64 days;
-    if (!enif_get_int64(env, argv[2], &days))
-        return make_badarg(env, argv[2]);
-
-    duckdb_date date = {.days = days};
-    if (duckdb_bind_date(stmt->duck, idx, date) == DuckDBError)
+    if (!enif_get_int64(env, argv[2], &days) || duckdb_bind_date(stmt->duck, idx, (duckdb_date){.days = days}) == DuckDBError)
         return make_badarg(env, argv[2]);
 
     return am_ok;
@@ -1148,11 +1129,8 @@ duxdb_bind_null(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
         return make_badarg(env, argv[0]);
 
     ErlNifUInt64 idx;
-    if (!enif_get_uint64(env, argv[1], &idx))
+    if (!enif_get_uint64(env, argv[1], &idx) || duckdb_bind_null(stmt->duck, idx) == DuckDBError)
         return make_badarg(env, argv[1]);
-
-    if (duckdb_bind_null(stmt->duck, idx) == DuckDBError)
-        return make_badarg(env, argv[2]);
 
     return am_ok;
 }
