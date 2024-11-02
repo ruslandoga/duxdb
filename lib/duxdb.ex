@@ -1,30 +1,41 @@
 defmodule DuxDB do
   @moduledoc "DuckDB in Elixir"
 
-  @typedoc """
-  A reference to a DuckDB database NIF resource.
-  """
+  @typedoc "A database object."
   @type db :: reference
 
-  @typedoc """
-  A reference to a DuckDB connection NIF resource.
-  """
+  @typedoc "A connection to a duckdb database."
   @type conn :: reference
 
   @typedoc """
-  A reference to a DuckDB result NIF resource.
+  A prepared statement is a parameterized query that allows you to bind parameters to it.
   """
+  @type stmt :: reference
+
+  # TODO don't expose result and data_chunk, just fetch it all, the results are materialized in DuckDB anyway, no need to step through them
+
+  defmodule Result do
+    @moduledoc """
+    TODO
+    """
+    defstruct [:command, :columns, :rows, :num_rows]
+  end
+
+  @typedoc "A query result."
   @type result :: reference
 
   @typedoc """
-  A reference to a DuckDB data chunk NIF resource.
+  A pending result is an intermediate structure for a query that is not yet fully executed.
   """
+  @type pending_result :: reference
+
+  @typedoc "A data chunk from a result."
   @type data_chunk :: reference
 
   @typedoc """
-  A reference to a DuckDB prepared statement NIF resource.
+  Appender enables fast data loading into DuckDB.
   """
-  @type stmt :: reference
+  @type appender :: reference
 
   @doc """
   Returns the version of the linked DuckDB library.
@@ -72,25 +83,22 @@ defmodule DuxDB do
   @spec get_config_flag(non_neg_integer) :: {name :: String.t(), description :: String.t()}
   def get_config_flag(_index), do: :erlang.nif_error(:undef)
 
-  @typep config :: reference
-
-  @spec create_config :: config
   defp create_config, do: :erlang.nif_error(:undef)
-
-  @spec destroy_config(config) :: :ok
   defp destroy_config(_config), do: :erlang.nif_error(:undef)
+  defp set_config(_config, _name, _option), do: :erlang.nif_error(:undef)
 
-  @spec build_config(config, Enumerable.t()) :: :ok
+  @type open_options ::
+          [{name :: String.t(), option :: String.t()}]
+          | %{(name :: String.t()) => option :: String.t()}
+
   defp build_config(config, options) do
     Enum.each(options, fn {name, option} ->
-      with :error <- set_config_nif(config, c_str(name), c_str(option)) do
+      with :error <- set_config(config, c_str(name), c_str(option)) do
         raise ArgumentError,
           message: "invalid config option #{inspect(options)} for #{inspect(name)}"
       end
     end)
   end
-
-  defp set_config_nif(_config, _name, _option), do: :erlang.nif_error(:undef)
 
   # TODO open/1 open/0
 
@@ -114,7 +122,7 @@ defmodule DuxDB do
 
   See https://duckdb.org/docs/api/c/api#duckdb_open_ext
   """
-  @spec open(Path.t(), Enumerable.t()) :: db
+  @spec open(Path.t(), open_options) :: db
   def open(path, options) do
     config = create_config()
 
@@ -133,7 +141,7 @@ defmodule DuxDB do
   @doc """
   Same as `open/2` but gets executed on a Dirty IO scheduler.
   """
-  @spec open_dirty_io(Path.t(), Enumerable.t()) :: db
+  @spec open_dirty_io(Path.t(), open_options) :: db
   def open_dirty_io(path, options) do
     config = create_config()
 
@@ -232,9 +240,16 @@ defmodule DuxDB do
 
   defmodule Error do
     @moduledoc """
-    Wraps `enum duckdb_error_type`
+    Wraps DuckDB error.
 
-    See https://duckdb.org/docs/api/c/api#duckdb_result_error_type
+    Contains `code` that is `duckdb_error_type` (e.g. DUCKDB_ERROR_DIVIDE_BY_ZERO = 6)
+    and the correspoinding error `message`.
+
+    Example:
+
+        # try do DuxDB.query(conn, "SELECT 1 / 0") rescue e -> e end
+        %DuxDB.Error{code: 6, message: "TODO"}
+
     """
 
     @type t :: %__MODULE__{code: integer, message: String.t()}
@@ -542,6 +557,8 @@ defmodule DuxDB do
   @spec parameter_name(stmt, non_neg_integer) :: String.t()
   def parameter_name(_stmt, _idx), do: :erlang.nif_error(:undef)
 
+  # TODO param_type
+
   @doc """
   Retrieves the index of the parameter for the prepared statement, identified by name.
 
@@ -584,6 +601,12 @@ defmodule DuxDB do
   """
   @spec prepared_statement_type(stmt) :: integer
   def prepared_statement_type(_stmt), do: :erlang.nif_error(:undef)
+
+  # TODO execute_prepared
+  # TODO extract_statements
+  # TODO prepare_extracted_statement
+  # TODO pending_prepared
+  # TODO stream_fetch_chunk
 
   @doc """
   Executes the prepared statement with the given bound parameters, and returns a materialized query result.
@@ -677,6 +700,13 @@ defmodule DuxDB do
   @spec bind_int64(stmt, non_neg_integer, integer) :: :ok
   def bind_int64(_stmt, _idx, _int), do: :erlang.nif_error(:undef)
 
+  # TODO bind_hugeint
+  # TODO bind_uhugeint
+  # TODO bind_decimal
+  # TODO bind_list? create_list_value ->
+  # TODO bind_union
+  # TODO bind_enum
+
   @doc """
   Binds an unsigned 64-bit integer to the specified parameter index.
 
@@ -737,6 +767,11 @@ defmodule DuxDB do
   def bind_date(stmt, idx, days), do: bind_date_nif(stmt, idx, days)
   defp bind_date_nif(_stmt, _idx, _days), do: :erlang.nif_error(:undef)
 
+  # TODO bind_time
+  # TODO bind_timestamp
+  # TODO bind_timestamp_tz
+  # TODO bind_interval
+
   @doc """
   Binds a NULL value to the specified parameter index.
 
@@ -749,6 +784,11 @@ defmodule DuxDB do
   """
   @spec bind_null(stmt, non_neg_integer) :: :ok
   def bind_null(_stmt, _idx), do: :erlang.nif_error(:undef)
+
+  # TODO
+  # get_profiling_info
+  # appender_create
+  # table_description
 
   # TODO find a cleaner way
   @compile inline: [c_str: 1]
