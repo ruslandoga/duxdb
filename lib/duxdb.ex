@@ -680,7 +680,7 @@ defmodule DuxDB do
 
   See https://duckdb.org/docs/api/c/api#duckdb_bind_date
   """
-  @spec bind_date(stmt, non_neg_integer, Date.t() | integer) :: :ok
+  @spec bind_date(stmt, non_neg_integer, Date.t() | (days :: integer)) :: :ok
   def bind_date(stmt, idx, %Date{} = date) do
     days = Date.to_gregorian_days(date) - @epoch_gregorian_days
     bind_date_nif(stmt, idx, days)
@@ -699,7 +699,7 @@ defmodule DuxDB do
 
   See https://duckdb.org/docs/api/c/api#duckdb_bind_time
   """
-  @spec bind_time(stmt, non_neg_integer, Time.t() | integer) :: :ok
+  @spec bind_time(stmt, non_neg_integer, Time.t() | (micros :: integer)) :: :ok
   def bind_time(stmt, idx, %Time{} = time) do
     {seconds, micros} = Time.to_seconds_after_midnight(time)
     bind_time_nif(stmt, idx, seconds * 1_000_000 + micros)
