@@ -49,46 +49,50 @@ defmodule DuxDBTest do
       {:ok, conn: DuxDB.connect(DuxDB.open(":memory:"))}
     end
 
-    property "bool, text, blob, int, float and null", %{conn: conn} do
+    property "bool, text, blob, int, float, and null", %{conn: conn} do
       stmt =
         DuxDB.prepare(
           conn,
           """
           select
             $bool as bool,
-            -- TODO
-            -- $text as text,
+            $text as text,
             $blob as blob,
-            $int as int,
-            $uint as uint,
+            $i64 as i64,
+            $u64 as u64,
             $f64 as f64,
             $null as null
           ;
           """
         )
 
-      check all(bool <- boolean(), bin <- binary(), int <- integer(), f <- float()) do
+      check all(
+              bool <- boolean(),
+              text <- string(:printable),
+              blob <- binary(),
+              i64 <- integer(),
+              u64 <- non_negative_integer(),
+              f64 <- float()
+            ) do
         DuxDB.bind_boolean(stmt, DuxDB.bind_parameter_index(stmt, "bool"), bool)
-        # TODO
-        # DuxDB.bind_varchar(stmt, DuxDB.bind_parameter_index(stmt, "text"), bin)
-        DuxDB.bind_blob(stmt, DuxDB.bind_parameter_index(stmt, "blob"), bin)
-        DuxDB.bind_int64(stmt, DuxDB.bind_parameter_index(stmt, "int"), int)
-        DuxDB.bind_uint64(stmt, DuxDB.bind_parameter_index(stmt, "uint"), abs(int))
-        DuxDB.bind_double(stmt, DuxDB.bind_parameter_index(stmt, "f64"), f)
+        DuxDB.bind_varchar(stmt, DuxDB.bind_parameter_index(stmt, "text"), text)
+        DuxDB.bind_blob(stmt, DuxDB.bind_parameter_index(stmt, "blob"), blob)
+        DuxDB.bind_int64(stmt, DuxDB.bind_parameter_index(stmt, "i64"), i64)
+        DuxDB.bind_uint64(stmt, DuxDB.bind_parameter_index(stmt, "u64"), u64)
+        DuxDB.bind_double(stmt, DuxDB.bind_parameter_index(stmt, "f64"), f64)
         DuxDB.bind_null(stmt, DuxDB.bind_parameter_index(stmt, "null"))
 
-        res = DuxDB.execute_prepared(stmt)
+        result = DuxDB.execute_prepared(stmt)
 
-        assert fetch_chunks(res) == [
+        assert fetch_chunks(result) == [
                  %{
-                   "blob" => [bin],
+                   "blob" => [blob],
                    "bool" => [bool],
-                   "f64" => [f],
-                   "int" => [int],
+                   "f64" => [f64],
+                   "i64" => [i64],
                    "null" => [nil],
-                   # TODO
-                   # "text" => [bin],
-                   "uint" => [abs(int)]
+                   "text" => [text],
+                   "u64" => [u64]
                  }
                ]
       end
