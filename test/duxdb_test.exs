@@ -1,7 +1,26 @@
 defmodule DuxDBTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case
   use ExUnitProperties
   doctest DuxDB
+
+  setup_all do
+    pid =
+      spawn(fn ->
+        :erlang.system_monitor(self(), long_schedule: 1)
+
+        receive do
+          message -> flunk("Unexpected message: #{inspect(message)}")
+        end
+      end)
+
+    IO.inspect(pid)
+
+    on_exit(fn ->
+      IO.inspect([pid, Process.alive?(pid)])
+    end)
+
+    :ok
+  end
 
   describe "open/2" do
     test "fails on broken config" do
@@ -13,13 +32,13 @@ defmodule DuxDBTest do
     test "fails on invalid path" do
       assert_raise ArgumentError,
                    "IO Error: Cannot open file \"tmp/somewhere/test.db\": No such file or directory",
-                   fn -> DuxDB.open("tmp/somewhere/test.db", []) end
+                   fn -> DuxDB.open("tmp/somewhere/test.db") end
     end
   end
 
   describe "close/1" do
     setup do
-      {:ok, db: DuxDB.open(":memory:", [])}
+      {:ok, db: DuxDB.open(":memory:")}
     end
 
     test "is no-op if already closed", %{db: db} do
@@ -35,7 +54,7 @@ defmodule DuxDBTest do
 
   describe "disconnect/1" do
     setup do
-      {:ok, conn: DuxDB.connect(DuxDB.open(":memory:", []))}
+      {:ok, conn: DuxDB.connect(DuxDB.open(":memory:"))}
     end
 
     test "is no-op if already disconnected", %{conn: conn} do
@@ -46,7 +65,7 @@ defmodule DuxDBTest do
 
   describe "bind and fetch" do
     setup do
-      {:ok, conn: DuxDB.connect(DuxDB.open(":memory:", []))}
+      {:ok, conn: DuxDB.connect(DuxDB.open(":memory:"))}
     end
 
     property "bool, text, blob, int, float and null", %{conn: conn} do
