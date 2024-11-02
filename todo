@@ -24,4 +24,5 @@
 - maybe don't always allocate vector on the stack
 - maybe vector resource + DuxDB.vector_to_list(vector)?
 - find a cleaner way than c_str(bin) -> [bin, 0]
+- improve ArgumentError in binds on invalid index
 - in-code TODOs
