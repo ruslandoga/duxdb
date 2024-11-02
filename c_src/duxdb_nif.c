@@ -194,11 +194,22 @@ static ERL_NIF_TERM
 make_date(ErlNifEnv *env, const duckdb_date_struct date_struct)
 {
     ERL_NIF_TERM date;
+
     // TODO handle error
     enif_make_map_from_arrays(
         env,
-        (ERL_NIF_TERM[]){am___struct__, am_calendar, am_year, am_month, am_day},
-        (ERL_NIF_TERM[]){am_elixir_date, am_calendar_iso, enif_make_int(env, date_struct.year), enif_make_int(env, date_struct.month), enif_make_int(env, date_struct.day)},
+        (ERL_NIF_TERM[]){
+            am___struct__,
+            am_calendar,
+            am_year,
+            am_month,
+            am_day},
+        (ERL_NIF_TERM[]){
+            am_elixir_date,
+            am_calendar_iso,
+            enif_make_int(env, date_struct.year),
+            enif_make_int(env, date_struct.month),
+            enif_make_int(env, date_struct.day)},
         5,
         &date);
 
@@ -212,11 +223,25 @@ make_time(ErlNifEnv *env, const duckdb_time_struct time_struct)
     ERL_NIF_TERM time;
 
     // TODO handle error
-    // TODO micros
     enif_make_map_from_arrays(
         env,
-        (ERL_NIF_TERM[]){am___struct__, am_calendar, am_hour, am_minute, am_second, am_microsecond},
-        (ERL_NIF_TERM[]){am_elixir_time, am_calendar_iso, enif_make_int(env, time_struct.hour), enif_make_int(env, time_struct.min), enif_make_int(env, time_struct.sec), enif_make_tuple2(env, enif_make_int(env, time_struct.micros), enif_make_int(env, 6))},
+        (ERL_NIF_TERM[]){
+            am___struct__,
+            am_calendar,
+            am_hour,
+            am_minute,
+            am_second,
+            am_microsecond},
+        (ERL_NIF_TERM[]){
+            am_elixir_time,
+            am_calendar_iso,
+            enif_make_int(env, time_struct.hour),
+            enif_make_int(env, time_struct.min),
+            enif_make_int(env, time_struct.sec),
+            enif_make_tuple2(
+                env,
+                enif_make_int(env, time_struct.micros),
+                enif_make_int(env, 6))},
         6,
         &time);
 
