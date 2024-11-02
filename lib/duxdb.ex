@@ -666,9 +666,9 @@ defmodule DuxDB do
 
       iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
       iex> stmt = DuxDB.prepare(conn, "SELECT ?")
-      iex> not_printable = <<0, 0, 0>>
+      iex> not_printable = <<1, 2, 3>>
       iex> DuxDB.bind_varchar(stmt, 0, not_printable)
-      ** (ArgumentError) argument error: <<0, 0, 0>>
+      ** (ArgumentError) argument error: <<1, 2, 3>>
 
   See https://duckdb.org/docs/api/c/api#duckdb_bind_varchar_length
   """
