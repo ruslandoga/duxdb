@@ -1,7 +1,9 @@
 defmodule DuxDBTest do
   use ExUnit.Case, async: true
   use ExUnitProperties
+
   doctest DuxDB
+  doctest DuxDB.Error
 
   describe "open/2" do
     test "fails on broken config" do
@@ -56,6 +58,7 @@ defmodule DuxDBTest do
           """
           select
             $date as date,
+            $time as time,
             $bool as bool,
             $text as text,
             $blob as blob,
@@ -76,6 +79,7 @@ defmodule DuxDBTest do
               f64 <- float()
             ) do
         date = Date.add(Date.utc_today(), i64)
+        time = Time.add(Time.utc_now(), i64)
 
         DuxDB.bind_boolean(stmt, DuxDB.bind_parameter_index(stmt, "bool"), bool)
         DuxDB.bind_varchar(stmt, DuxDB.bind_parameter_index(stmt, "text"), text)
@@ -85,6 +89,7 @@ defmodule DuxDBTest do
         DuxDB.bind_double(stmt, DuxDB.bind_parameter_index(stmt, "f64"), f64)
         DuxDB.bind_null(stmt, DuxDB.bind_parameter_index(stmt, "null"))
         DuxDB.bind_date(stmt, DuxDB.bind_parameter_index(stmt, "date"), date)
+        DuxDB.bind_time(stmt, DuxDB.bind_parameter_index(stmt, "time"), time)
 
         result = DuxDB.execute_prepared(stmt)
 
@@ -97,7 +102,8 @@ defmodule DuxDBTest do
                    "null" => [nil],
                    "text" => [text],
                    "u64" => [u64],
-                   "date" => [date]
+                   "date" => [date],
+                   "time" => [time]
                  }
                ]
       end

@@ -1,28 +1,20 @@
 defmodule DuxDB do
   @moduledoc "DuckDB in Elixir"
 
-  @typedoc """
-  A reference to a DuckDB database NIF resource.
-  """
+  @typedoc "A database object."
   @type db :: reference
 
-  @typedoc """
-  A reference to a DuckDB connection NIF resource.
-  """
+  @typedoc "A connection to a duckdb database."
   @type conn :: reference
 
-  @typedoc """
-  A reference to a DuckDB result NIF resource.
-  """
+  @typedoc "A query result."
   @type result :: reference
 
-  @typedoc """
-  A reference to a DuckDB data chunk NIF resource.
-  """
+  @typedoc "A data chunk from a result."
   @type data_chunk :: reference
 
   @typedoc """
-  A reference to a DuckDB prepared statement NIF resource.
+  A prepared statement is a parameterized query that allows you to bind parameters to it.
   """
   @type stmt :: reference
 
@@ -200,10 +192,18 @@ defmodule DuxDB do
   def disconnect(_conn), do: :erlang.nif_error(:undef)
 
   defmodule Error do
-    @moduledoc """
-    Wraps `enum duckdb_error_type`
+    @moduledoc ~S"""
+    Wraps DuckDB error.
 
-    See https://duckdb.org/docs/api/c/api#duckdb_result_error_type
+    Contains `code` that is `duckdb_error_type` (e.g. DUCKDB_ERROR_PARSER = 14)
+    and the correspoinding error `message`.
+
+    Example:
+
+        iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+        iex> try do DuxDB.query(conn, "sel 1") rescue e -> e end
+        %DuxDB.Error{code: 14, message: "Parser Error: syntax error at or near \"sel\"\nLINE 1: sel 1\n        ^"}
+
     """
 
     @type t :: %__MODULE__{code: integer, message: String.t()}
@@ -675,7 +675,7 @@ defmodule DuxDB do
 
       iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
       iex> stmt = DuxDB.prepare(conn, "SELECT ?")
-      iex> DuxDB.bind_date(stmt, 1, ~D[2023-01-01])
+      iex> DuxDB.bind_date(stmt, 1, Date.utc_today())
       :ok
 
   See https://duckdb.org/docs/api/c/api#duckdb_bind_date
@@ -688,6 +688,25 @@ defmodule DuxDB do
 
   def bind_date(stmt, idx, days), do: bind_date_nif(stmt, idx, days)
   defp bind_date_nif(_stmt, _idx, _days), do: :erlang.nif_error(:undef)
+
+  @doc """
+  Binds a time (as microseconds since midnight) to the specified parameter index.
+
+      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> stmt = DuxDB.prepare(conn, "SELECT ?")
+      iex> DuxDB.bind_time(stmt, 1, Time.utc_now())
+      :ok
+
+  See https://duckdb.org/docs/api/c/api#duckdb_bind_time
+  """
+  @spec bind_time(stmt, non_neg_integer, Time.t() | integer) :: :ok
+  def bind_time(stmt, idx, %Time{} = time) do
+    {seconds, micros} = Time.to_seconds_after_midnight(time)
+    bind_time_nif(stmt, idx, seconds * 1_000_000 + micros)
+  end
+
+  def bind_time(stmt, idx, micros), do: bind_time_nif(stmt, idx, micros)
+  defp bind_time_nif(_stmt, _idx, _micros), do: :erlang.nif_error(:undef)
 
   @doc """
   Binds a NULL value to the specified parameter index.
