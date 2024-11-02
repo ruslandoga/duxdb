@@ -131,10 +131,6 @@ defmodule DuxDB do
   @doc """
   Closes a DuckDB database.
 
-  > ### Runs on a main scheduler. {: .warning}
-  >
-  > Closing an on-disk database can take a long time, consider using `close_dirty_io/1` instead.
-
       iex> db = DuxDB.open(":memory:")
       iex> DuxDB.close(db)
       :ok
