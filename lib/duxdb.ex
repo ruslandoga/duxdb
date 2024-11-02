@@ -644,30 +644,26 @@ defmodule DuxDB do
 
   Raises `ArgumentError` on invalid `stmt` ref.
 
-      iex> not_stmt = :erlang.list_to_ref(~c"#Ref<0.0.0.0>")
-      iex> DuxDB.bind_varchar(not_stmt, 1, "hello, world")
+      iex> DuxDB.bind_varchar(_not_stmt = :erlang.list_to_ref(~c"#Ref<0.0.0.0>"), 1, "hello, world")
       ** (ArgumentError) argument error: #Reference<0.0.0.0>
 
   (TODO improve) Raises `ArgumentError` on invalid index:
 
       iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
       iex> stmt = DuxDB.prepare(conn, "SELECT ?")
-      iex> bad_index = 2
-      iex> DuxDB.bind_varchar(stmt, bad_index, "hello, world")
+      iex> DuxDB.bind_varchar(stmt, _bad_index = 2, "hello, world")
       ** (ArgumentError) argument error: "hello, world"
 
   Raises `ArgumentError` on invalid text:
 
       iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
       iex> stmt = DuxDB.prepare(conn, "SELECT ?")
-      iex> not_text = 1
-      iex> DuxDB.bind_varchar(stmt, 0, not_text)
+      iex> DuxDB.bind_varchar(stmt, 0, _not_text = 1)
       ** (ArgumentError) argument error: 1
 
       iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
       iex> stmt = DuxDB.prepare(conn, "SELECT ?")
-      iex> not_printable = <<1, 2, 3>>
-      iex> DuxDB.bind_varchar(stmt, 0, not_printable)
+      iex> DuxDB.bind_varchar(stmt, 0, _not_printable = <<1, 2, 3>>)
       ** (ArgumentError) argument error: <<1, 2, 3>>
 
   See https://duckdb.org/docs/api/c/api#duckdb_bind_varchar_length
