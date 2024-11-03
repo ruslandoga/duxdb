@@ -46,12 +46,59 @@ defmodule DuxDBTest do
     end
   end
 
+  describe "DUCKDB_TYPE" do
+    setup do
+      conn = DuxDB.connect(DuxDB.open(":memory:"))
+
+      query = fn sql ->
+        result = DuxDB.query(conn, sql)
+
+        assert [value] =
+                 result
+                 |> DuxDB.fetch_chunk()
+                 |> DuxDB.data_chunk_get_vector(0)
+
+        refute DuxDB.fetch_chunk(result)
+
+        value
+      end
+
+      {:ok, query: query}
+    end
+
+    test "DATE", %{query: query} do
+      assert query.("select DATE '0000-01-01'") == ~D[0000-01-01]
+      assert query.("select DATE '1970-01-01'") == ~D[1970-01-01]
+      assert query.("select DATE '2024-01-01'") == ~D[2024-01-01]
+    end
+
+    test "TIME", %{query: query} do
+      assert query.("select TIME '12:34:56'") == ~T[12:34:56.000000]
+      assert query.("select TIME '12:34:56.123'") == ~T[12:34:56.123000]
+      assert query.("select TIME '12:34:56.123456'") == ~T[12:34:56.123456]
+    end
+
+    test "TIMESTAMP", %{query: query} do
+      assert query.("select TIMESTAMP '2024-01-01 12:00:00'") ==
+               ~N[2024-01-01 12:00:00.000000]
+
+      assert query.("select TIMESTAMP '2024-01-01 12:00:00.123'") ==
+               ~N[2024-01-01 12:00:00.123000]
+
+      assert query.("select TIMESTAMP '2024-01-01 12:00:00.123456'") ==
+               ~N[2024-01-01 12:00:00.123456]
+
+      assert query.("select TIMESTAMP '2024-01-01 12:00:00.123456789'") ==
+               ~N[2024-01-01 12:00:00.123456]
+    end
+  end
+
   describe "bind and fetch" do
     setup do
       {:ok, conn: DuxDB.connect(DuxDB.open(":memory:"))}
     end
 
-    property "bool, text, blob, int, float, and null", %{conn: conn} do
+    property "all supported data types", %{conn: conn} do
       stmt =
         DuxDB.prepare(
           conn,
@@ -59,6 +106,7 @@ defmodule DuxDBTest do
           select
             $date as date,
             $time as time,
+            $timestamp as timestamp,
             $bool as bool,
             $text as text,
             $blob as blob,
@@ -80,6 +128,7 @@ defmodule DuxDBTest do
             ) do
         date = Date.add(Date.utc_today(), i64)
         time = Time.add(Time.utc_now(), i64)
+        timestamp = NaiveDateTime.add(NaiveDateTime.utc_now(), i64)
 
         DuxDB.bind_boolean(stmt, DuxDB.bind_parameter_index(stmt, "bool"), bool)
         DuxDB.bind_varchar(stmt, DuxDB.bind_parameter_index(stmt, "text"), text)
@@ -90,6 +139,7 @@ defmodule DuxDBTest do
         DuxDB.bind_null(stmt, DuxDB.bind_parameter_index(stmt, "null"))
         DuxDB.bind_date(stmt, DuxDB.bind_parameter_index(stmt, "date"), date)
         DuxDB.bind_time(stmt, DuxDB.bind_parameter_index(stmt, "time"), time)
+        DuxDB.bind_timestamp(stmt, DuxDB.bind_parameter_index(stmt, "timestamp"), timestamp)
 
         result = DuxDB.execute_prepared(stmt)
 
@@ -103,7 +153,8 @@ defmodule DuxDBTest do
                    "text" => [text],
                    "u64" => [u64],
                    "date" => [date],
-                   "time" => [time]
+                   "time" => [time],
+                   "timestamp" => [timestamp]
                  }
                ]
       end
