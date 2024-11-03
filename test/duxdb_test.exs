@@ -141,9 +141,7 @@ defmodule DuxDBTest do
         DuxDB.bind_time(stmt, DuxDB.bind_parameter_index(stmt, "time"), time)
         DuxDB.bind_timestamp(stmt, DuxDB.bind_parameter_index(stmt, "timestamp"), timestamp)
 
-        result = DuxDB.execute_prepared(stmt)
-
-        assert fetch_chunks(result) == [
+        assert fetch_chunks(DuxDB.execute_prepared(stmt)) == [
                  %{
                    "blob" => [blob],
                    "bool" => [bool],
