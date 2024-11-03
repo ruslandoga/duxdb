@@ -727,6 +727,17 @@ defmodule DuxDB do
   {seconds, _} = NaiveDateTime.to_gregorian_seconds(~N[1970-01-01 00:00:00])
   @epoch_gregorian_seconds seconds
 
+  @doc """
+  Binds a timestamp (as microseconds since 1970-01-01 00:00:00) to the specified parameter index.
+
+      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> stmt = DuxDB.prepare(conn, "SELECT ?")
+      iex> :ok = DuxDB.bind_timestamp(stmt, 1, DateTime.utc_now())
+      iex> DuxDB.bind_timestamp(stmt, 1, NaiveDateTime.utc_now())
+      :ok
+
+  See https://duckdb.org/docs/api/c/api#duckdb_bind_timestamp
+  """
   @spec bind_timestamp(
           stmt,
           non_neg_integer,
