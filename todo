@@ -13,7 +13,6 @@
 - bind_list? create_list_value ->
 - bind_union
 - bind_enum
-- bind_timestamp
 - bind_timestamp_tz
 - bind_interval
 - get_profiling_info
