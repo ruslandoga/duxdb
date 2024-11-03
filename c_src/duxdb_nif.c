@@ -23,7 +23,7 @@ static ERL_NIF_TERM am_microsecond;
 static ERL_NIF_TERM am_elixir_date;
 static ERL_NIF_TERM am_elixir_time;
 static ERL_NIF_TERM am_elixir_naive_date_time;
-static ERL_NIF_TERM am_calendar_iso;
+static ERL_NIF_TERM am_elixir_calendar_iso;
 
 static ErlNifResourceType *config_t;
 static ErlNifResourceType *db_t;
@@ -150,7 +150,7 @@ on_load(ErlNifEnv *env, void **priv, ERL_NIF_TERM info)
     am_elixir_date = enif_make_atom(env, "Elixir.Date");
     am_elixir_time = enif_make_atom(env, "Elixir.Time");
     am_elixir_naive_date_time = enif_make_atom(env, "Elixir.NaiveDateTime");
-    am_calendar_iso = enif_make_atom(env, "Elixir.Calendar.ISO");
+    am_elixir_calendar_iso = enif_make_atom(env, "Elixir.Calendar.ISO");
 
     config_t = enif_open_resource_type(env, "duxdb", "config", config_destructor, ERL_NIF_RT_CREATE, NULL);
     if (!config_t)
@@ -207,7 +207,7 @@ make_date(ErlNifEnv *env, const duckdb_date_struct date_struct)
             am_day},
         (ERL_NIF_TERM[]){
             am_elixir_date,
-            am_calendar_iso,
+            am_elixir_calendar_iso,
             enif_make_int(env, date_struct.year),
             enif_make_int(env, date_struct.month),
             enif_make_int(env, date_struct.day)},
@@ -245,7 +245,7 @@ make_time(ErlNifEnv *env, const duckdb_time_struct time_struct)
             am_microsecond},
         (ERL_NIF_TERM[]){
             am_elixir_time,
-            am_calendar_iso,
+            am_elixir_calendar_iso,
             enif_make_int(env, time_struct.hour),
             enif_make_int(env, time_struct.min),
             enif_make_int(env, time_struct.sec),
@@ -282,7 +282,7 @@ make_naive_datetime(ErlNifEnv *env, duckdb_type type, const duckdb_timestamp_str
             am_microsecond},
         (ERL_NIF_TERM[]){
             am_elixir_naive_date_time,
-            am_calendar_iso,
+            am_elixir_calendar_iso,
             enif_make_int(env, d.year),
             enif_make_int(env, d.month),
             enif_make_int(env, d.day),
