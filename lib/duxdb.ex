@@ -724,6 +724,27 @@ defmodule DuxDB do
   def bind_time(stmt, idx, micros), do: bind_time_nif(stmt, idx, micros)
   defp bind_time_nif(_stmt, _idx, _micros), do: :erlang.nif_error(:undef)
 
+  {seconds, _} = NaiveDateTime.to_gregorian_seconds(~N[1970-01-01 00:00:00])
+  @epoch_gregorian_seconds seconds
+
+  @spec bind_timestamp(
+          stmt,
+          non_neg_integer,
+          DateTime.t() | NaiveDateTime.t() | (micros :: integer)
+        ) :: :ok
+  def bind_timestamp(stmt, idx, %NaiveDateTime{} = naive) do
+    {seconds, micros} = NaiveDateTime.to_gregorian_seconds(naive)
+    bind_timestamp_nif(stmt, idx, (seconds - @epoch_gregorian_seconds) * 1_000_000 + micros)
+  end
+
+  def bind_timestamp(stmt, idx, %DateTime{} = dt) do
+    {seconds, micros} = DateTime.to_gregorian_seconds(dt)
+    bind_timestamp_nif(stmt, idx, (seconds - @epoch_gregorian_seconds) * 1_000_000 + micros)
+  end
+
+  def bind_timestamp(stmt, idx, micros), do: bind_timestamp_nif(stmt, idx, micros)
+  defp bind_timestamp_nif(_stmt, _idx, _micros), do: :erlang.nif_error(:undef)
+
   @doc """
   Binds a NULL value to the specified parameter index.
 
