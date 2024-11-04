@@ -72,10 +72,22 @@ defmodule DuxDBTest do
       assert query.("select DATE '2024-01-01'") == ~D[2024-01-01]
     end
 
+    property "DATE", %{query: query} do
+      check all(d <- date()) do
+        assert query.("select DATE '#{d}'") == d
+      end
+    end
+
     test "TIME", %{query: query} do
       assert query.("select TIME '12:34:56'") == ~T[12:34:56.000000]
       assert query.("select TIME '12:34:56.123'") == ~T[12:34:56.123000]
       assert query.("select TIME '12:34:56.123456'") == ~T[12:34:56.123456]
+    end
+
+    property "TIME", %{query: query} do
+      check all(t <- time()) do
+        assert query.("select TIME '#{t}'") == t
+      end
     end
 
     test "TIMESTAMP", %{query: query} do
@@ -90,6 +102,12 @@ defmodule DuxDBTest do
 
       assert query.("select TIMESTAMP '2024-01-01 12:00:00.123456789'") ==
                ~N[2024-01-01 12:00:00.123456]
+    end
+
+    property "TIMESTAMP", %{query: query} do
+      check all(t <- naive_datetime()) do
+        assert query.("select TIMESTAMP '#{t}'") == t
+      end
     end
 
     property "HUGEINT", %{query: query} do
