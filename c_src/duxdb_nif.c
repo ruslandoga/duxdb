@@ -798,11 +798,10 @@ duxdb_data_chunk_get_vector(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
                 break;
             }
 
-            // TODO
             case DUCKDB_TYPE_HUGEINT:
             {
                 duckdb_hugeint hi = ((duckdb_hugeint *)data)[i];
-                terms[i] = enif_make_double(env, duckdb_hugeint_to_double(hi));
+                terms[i] = enif_make_tuple2(env, enif_make_int64(env, hi.upper), enif_make_uint64(env, hi.lower));
                 break;
             }
 
@@ -936,7 +935,16 @@ duxdb_data_chunk_get_vector(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
         }
     }
 
-    return enif_make_list_from_array(env, terms, chunk_size);
+    ERL_NIF_TERM ret = enif_make_list_from_array(env, terms, chunk_size);
+
+    // TODO
+    switch (type)
+    {
+    case DUCKDB_TYPE_HUGEINT:
+        return enif_make_tuple2(env, enif_make_int(env, DUCKDB_TYPE_HUGEINT), ret);
+    default:
+        return ret;
+    }
 }
 
 static ERL_NIF_TERM
@@ -1265,6 +1273,28 @@ duxdb_bind_timestamp(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
+duxdb_bind_hugeint(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    duxdb_stmt *stmt;
+    if (!enif_get_resource(env, argv[0], stmt_t, (void **)&stmt) || !(stmt->duck))
+        return make_badarg(env, argv[0]);
+
+    ErlNifUInt64 idx;
+    if (!enif_get_uint64(env, argv[1], &idx))
+        return make_badarg(env, argv[1]);
+
+    ErlNifSInt64 upper;
+    ErlNifUInt64 lower;
+
+    if (!enif_get_int64(env, argv[2], &upper) ||
+        !enif_get_uint64(env, argv[3], &lower) ||
+        duckdb_bind_hugeint(stmt->duck, idx, (duckdb_hugeint){.lower = lower, .upper = upper}) == DuckDBError)
+        return am_error;
+
+    return am_ok;
+}
+
+static ERL_NIF_TERM
 duxdb_bind_null(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
     duxdb_stmt *stmt;
@@ -1316,7 +1346,7 @@ static ErlNifFunc nif_funcs[] = {
     // TODO destoy once empty
     {"destroy_data_chunk", 1, duxdb_destroy_data_chunk, 0},
     {"data_chunk_get_column_count", 1, duxdb_data_chunk_get_column_count, 0},
-    {"data_chunk_get_vector", 2, duxdb_data_chunk_get_vector, 0},
+    {"data_chunk_get_vector_nif", 2, duxdb_data_chunk_get_vector, 0},
 
     {"prepare_nif", 2, duxdb_prepare_nif, ERL_NIF_DIRTY_JOB_CPU_BOUND},
 
@@ -1341,6 +1371,7 @@ static ErlNifFunc nif_funcs[] = {
     {"bind_date_nif", 3, duxdb_bind_date, 0},
     {"bind_time_nif", 3, duxdb_bind_time, 0},
     {"bind_timestamp_nif", 3, duxdb_bind_timestamp, 0},
+    {"bind_hugeint_nif", 4, duxdb_bind_hugeint, 0},
     {"bind_null", 2, duxdb_bind_null, 0},
 };
 

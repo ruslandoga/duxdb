@@ -7,7 +7,6 @@
 - prepare_extracted_statement
 - pending_prepared
 - stream_fetch_chunk
-- bind_hugeint
 - bind_uhugeint
 - bind_decimal
 - bind_list? create_list_value ->

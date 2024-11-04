@@ -416,8 +416,17 @@ defmodule DuxDB do
 
   See https://duckdb.org/docs/api/c/api#duckdb_data_chunk_get_vector
   """
-  @spec data_chunk_get_vector(data_chunk, non_neg_integer) :: [binary | number | boolean | nil]
-  def data_chunk_get_vector(_data_chunk, _idx), do: :erlang.nif_error(:undef)
+  @spec data_chunk_get_vector(data_chunk, non_neg_integer) :: [
+          binary | number | boolean | nil | Date.t() | Time.t() | NaiveDateTime.t()
+        ]
+  def data_chunk_get_vector(data_chunk, idx) do
+    case data_chunk_get_vector_nif(data_chunk, idx) do
+      vector when is_list(vector) -> vector
+      {_DUCKDB_TYPE_HUGEINT = 16, hugeints} -> unwrap_hugeints(hugeints)
+    end
+  end
+
+  defp data_chunk_get_vector_nif(_data_chunk, _idx), do: :erlang.nif_error(:undef)
 
   @doc """
   Creates a prepared statement object from a query.
@@ -755,6 +764,53 @@ defmodule DuxDB do
 
   def bind_timestamp(stmt, idx, micros), do: bind_timestamp_nif(stmt, idx, micros)
   defp bind_timestamp_nif(_stmt, _idx, _micros), do: :erlang.nif_error(:undef)
+
+  @upper_base Bitwise.bsl(2, 63)
+
+  @doc """
+  Binds a hugeint to the specified parameter index.
+
+      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> stmt = DuxDB.prepare(conn, "SELECT ?")
+      iex> DuxDB.bind_hugeint(stmt, 1, 0xFFFFFFFFFFFFFFFFF)
+      :ok
+
+  See https://duckdb.org/docs/api/c/api#duckdb_bind_hugeint
+  """
+  @spec bind_hugeint(stmt, non_neg_integer, integer) :: :ok
+  def bind_hugeint(stmt, idx, hugeint) when hugeint >= 0 do
+    upper = div(hugeint, @upper_base)
+    lower = hugeint - upper * @upper_base
+    bind_hugeint(stmt, idx, hugeint, upper, lower)
+  end
+
+  # TODO simplify
+  def bind_hugeint(stmt, idx, hugeint) do
+    upper = div(hugeint, @upper_base)
+    lower = hugeint - upper * @upper_base
+
+    if lower < 0 do
+      upper = upper - 1
+      lower = lower + @upper_base
+      bind_hugeint(stmt, idx, hugeint, upper, lower)
+    else
+      bind_hugeint(stmt, idx, hugeint, upper, lower)
+    end
+  end
+
+  defp bind_hugeint(stmt, idx, hugeint, upper, lower) do
+    with :error <- bind_hugeint_nif(stmt, idx, upper, lower) do
+      :erlang.error({:badarg, hugeint})
+    end
+  end
+
+  defp bind_hugeint_nif(_stmt, _idx, _upper, _lower), do: :erlang.nif_error(:undef)
+
+  defp unwrap_hugeints([{upper, lower} | rest]) do
+    [upper * @upper_base + lower | unwrap_hugeints(rest)]
+  end
+
+  defp unwrap_hugeints([] = done), do: done
 
   @doc """
   Binds a NULL value to the specified parameter index.
