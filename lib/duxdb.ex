@@ -798,6 +798,7 @@ defmodule DuxDB do
     end
   end
 
+  @compile inline: [bind_hugeint: 5]
   defp bind_hugeint(stmt, idx, hugeint, upper, lower) do
     with :error <- bind_hugeint_nif(stmt, idx, upper, lower) do
       :erlang.error({:badarg, hugeint})
