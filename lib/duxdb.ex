@@ -22,7 +22,7 @@ defmodule DuxDB do
   Returns the version of the linked DuckDB library.
 
       iex> DuxDB.library_version()
-      "v1.1.2"
+      "v1.1.3"
 
   See https://duckdb.org/docs/api/c/api#duckdb_library_version
   """
