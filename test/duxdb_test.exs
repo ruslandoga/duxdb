@@ -120,6 +120,7 @@ defmodule DuxDBTest do
             $blob as blob,
             $i64 as i64,
             $i128 as i128,
+            $u128 as u128,
             $u64 as u64,
             $f64 as f64,
             $null as null
@@ -139,6 +140,7 @@ defmodule DuxDBTest do
         time = Time.add(Time.utc_now(), i64)
         timestamp = NaiveDateTime.add(NaiveDateTime.utc_now(), i64)
         hugeint = Bitwise.bsl(i64, 64) + u64
+        uhugeint = Bitwise.bsl(u64, 64) + u64
 
         DuxDB.bind_boolean(stmt, DuxDB.bind_parameter_index(stmt, "bool"), bool)
         DuxDB.bind_varchar(stmt, DuxDB.bind_parameter_index(stmt, "text"), text)
@@ -146,6 +148,7 @@ defmodule DuxDBTest do
         DuxDB.bind_int64(stmt, DuxDB.bind_parameter_index(stmt, "i64"), i64)
         DuxDB.bind_hugeint(stmt, DuxDB.bind_parameter_index(stmt, "i128"), hugeint)
         DuxDB.bind_uint64(stmt, DuxDB.bind_parameter_index(stmt, "u64"), u64)
+        DuxDB.bind_uhugeint(stmt, DuxDB.bind_parameter_index(stmt, "u128"), uhugeint)
         DuxDB.bind_double(stmt, DuxDB.bind_parameter_index(stmt, "f64"), f64)
         DuxDB.bind_null(stmt, DuxDB.bind_parameter_index(stmt, "null"))
         DuxDB.bind_date(stmt, DuxDB.bind_parameter_index(stmt, "date"), date)
@@ -164,7 +167,8 @@ defmodule DuxDBTest do
                    "date" => [date],
                    "time" => [time],
                    "timestamp" => [timestamp],
-                   "i128" => [hugeint]
+                   "i128" => [hugeint],
+                   "u128" => [uhugeint]
                  }
                ]
       end

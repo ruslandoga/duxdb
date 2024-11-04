@@ -392,6 +392,8 @@ defmodule DuxDB do
   @spec data_chunk_get_column_count(data_chunk) :: non_neg_integer
   def data_chunk_get_column_count(_data_chunk), do: :erlang.nif_error(:undef)
 
+  @type vector_value :: binary | number | boolean | Date.t() | Time.t() | NaiveDateTime.t()
+
   @doc """
   Retrieves the vector (as a list) at the specified column index in the data chunk.
 
@@ -416,13 +418,12 @@ defmodule DuxDB do
 
   See https://duckdb.org/docs/api/c/api#duckdb_data_chunk_get_vector
   """
-  @spec data_chunk_get_vector(data_chunk, non_neg_integer) :: [
-          binary | number | boolean | nil | Date.t() | Time.t() | NaiveDateTime.t()
-        ]
+  @spec data_chunk_get_vector(data_chunk, non_neg_integer) :: [vector_value | nil]
   def data_chunk_get_vector(data_chunk, idx) do
     case data_chunk_get_vector_nif(data_chunk, idx) do
       vector when is_list(vector) -> vector
       {_DUCKDB_TYPE_HUGEINT = 16, hugeints} -> unwrap_hugeints(hugeints)
+      {_DUCKDB_TYPE_UHUGEINT = 32, uhugeints} -> unwrap_hugeints(uhugeints)
     end
   end
 
@@ -768,7 +769,7 @@ defmodule DuxDB do
   @upper_base Bitwise.bsl(2, 63)
 
   @doc """
-  Binds a hugeint to the specified parameter index.
+  Binds a HUGEINT (128 bit integer) to the specified parameter index.
 
       iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
       iex> stmt = DuxDB.prepare(conn, "SELECT ?")
@@ -812,6 +813,28 @@ defmodule DuxDB do
   end
 
   defp unwrap_hugeints([] = done), do: done
+
+  @doc """
+  Binds an UHUGEINT (128 bit unsigned integer) to the specified parameter index.
+
+      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> stmt = DuxDB.prepare(conn, "SELECT ?")
+      iex> DuxDB.bind_uhugeint(stmt, 1, 0xFFFFFFFFFFFFFFFFF)
+      :ok
+
+  See https://duckdb.org/docs/api/c/api#duckdb_bind_uhugeint
+  """
+  @spec bind_hugeint(stmt, non_neg_integer, non_neg_integer) :: :ok
+  def bind_uhugeint(stmt, idx, uhugeint) when uhugeint >= 0 do
+    upper = div(uhugeint, @upper_base)
+    lower = uhugeint - upper * @upper_base
+
+    with :error <- bind_uhugeint_nif(stmt, idx, upper, lower) do
+      :erlang.error({:badarg, uhugeint})
+    end
+  end
+
+  defp bind_uhugeint_nif(_stmt, _idx, _upper, _lower), do: :erlang.nif_error(:undef)
 
   @doc """
   Binds a NULL value to the specified parameter index.

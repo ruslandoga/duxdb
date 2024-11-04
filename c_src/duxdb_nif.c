@@ -805,11 +805,10 @@ duxdb_data_chunk_get_vector(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
                 break;
             }
 
-            // TODO
             case DUCKDB_TYPE_UHUGEINT:
             {
                 duckdb_uhugeint uhi = ((duckdb_uhugeint *)data)[i];
-                terms[i] = enif_make_double(env, duckdb_uhugeint_to_double(uhi));
+                terms[i] = enif_make_tuple2(env, enif_make_uint64(env, uhi.upper), enif_make_uint64(env, uhi.lower));
                 break;
             }
 
@@ -942,6 +941,8 @@ duxdb_data_chunk_get_vector(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     {
     case DUCKDB_TYPE_HUGEINT:
         return enif_make_tuple2(env, enif_make_int(env, DUCKDB_TYPE_HUGEINT), ret);
+    case DUCKDB_TYPE_UHUGEINT:
+        return enif_make_tuple2(env, enif_make_int(env, DUCKDB_TYPE_UHUGEINT), ret);
     default:
         return ret;
     }
@@ -1295,6 +1296,28 @@ duxdb_bind_hugeint(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
+duxdb_bind_uhugeint(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    duxdb_stmt *stmt;
+    if (!enif_get_resource(env, argv[0], stmt_t, (void **)&stmt) || !(stmt->duck))
+        return make_badarg(env, argv[0]);
+
+    ErlNifUInt64 idx;
+    if (!enif_get_uint64(env, argv[1], &idx))
+        return make_badarg(env, argv[1]);
+
+    ErlNifUInt64 upper;
+    ErlNifUInt64 lower;
+
+    if (!enif_get_uint64(env, argv[2], &upper) ||
+        !enif_get_uint64(env, argv[3], &lower) ||
+        duckdb_bind_uhugeint(stmt->duck, idx, (duckdb_uhugeint){.lower = lower, .upper = upper}) == DuckDBError)
+        return am_error;
+
+    return am_ok;
+}
+
+static ERL_NIF_TERM
 duxdb_bind_null(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
     duxdb_stmt *stmt;
@@ -1372,6 +1395,7 @@ static ErlNifFunc nif_funcs[] = {
     {"bind_time_nif", 3, duxdb_bind_time, 0},
     {"bind_timestamp_nif", 3, duxdb_bind_timestamp, 0},
     {"bind_hugeint_nif", 4, duxdb_bind_hugeint, 0},
+    {"bind_uhugeint_nif", 4, duxdb_bind_uhugeint, 0},
     {"bind_null", 2, duxdb_bind_null, 0},
 };
 
