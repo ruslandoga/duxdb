@@ -259,7 +259,7 @@ make_time(ErlNifEnv *env, const duckdb_time_struct time_struct)
 // TODO inline
 // TODO finite / infinite
 static ERL_NIF_TERM
-make_naive_datetime(ErlNifEnv *env, duckdb_type type, const duckdb_timestamp_struct ts)
+make_naive_datetime(ErlNifEnv *env, const duckdb_timestamp_struct ts)
 {
 
     duckdb_date_struct d = ts.date;
@@ -677,6 +677,436 @@ duxdb_data_chunk_get_column_count(ErlNifEnv *env, int argc, const ERL_NIF_TERM a
     return enif_make_uint64(env, count);
 }
 
+// TODO: this are silly, maybe macros?
+
+static ERL_NIF_TERM
+make_bools_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
+{
+    ERL_NIF_TERM terms[chunk_size];
+    bool *data = (bool *)duckdb_vector_get_data(vector);
+    uint64_t *validity = duckdb_vector_get_validity(vector);
+
+    if (validity)
+    {
+        for (idx_t i = 0; i < chunk_size; i++)
+            if (duckdb_validity_row_is_valid(validity, i))
+                terms[i] = data[i] ? am_true : am_false;
+            else
+                terms[i] = am_nil;
+    }
+    else
+    {
+        for (idx_t i = 0; i < chunk_size; i++)
+            terms[i] = data[i] ? am_true : am_false;
+    }
+
+    return enif_make_list_from_array(env, terms, chunk_size);
+}
+
+static ERL_NIF_TERM
+make_int8s_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
+{
+    ERL_NIF_TERM terms[chunk_size];
+    int8_t *data = (int8_t *)duckdb_vector_get_data(vector);
+    uint64_t *validity = duckdb_vector_get_validity(vector);
+
+    if (validity)
+    {
+        for (idx_t i = 0; i < chunk_size; i++)
+            if (duckdb_validity_row_is_valid(validity, i))
+                terms[i] = enif_make_int(env, data[i]);
+            else
+                terms[i] = am_nil;
+    }
+    else
+    {
+        for (idx_t i = 0; i < chunk_size; i++)
+            terms[i] = enif_make_int(env, data[i]);
+    }
+
+    return enif_make_list_from_array(env, terms, chunk_size);
+}
+
+static ERL_NIF_TERM
+make_int16s_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
+{
+    ERL_NIF_TERM terms[chunk_size];
+    int16_t *data = (int16_t *)duckdb_vector_get_data(vector);
+    uint64_t *validity = duckdb_vector_get_validity(vector);
+
+    if (validity)
+    {
+        for (idx_t i = 0; i < chunk_size; i++)
+            if (duckdb_validity_row_is_valid(validity, i))
+                terms[i] = enif_make_int(env, data[i]);
+            else
+                terms[i] = am_nil;
+    }
+    else
+    {
+        for (idx_t i = 0; i < chunk_size; i++)
+            terms[i] = enif_make_int(env, data[i]);
+    }
+
+    return enif_make_list_from_array(env, terms, chunk_size);
+}
+
+static ERL_NIF_TERM
+make_int32s_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
+{
+    ERL_NIF_TERM terms[chunk_size];
+    int32_t *data = (int32_t *)duckdb_vector_get_data(vector);
+    uint64_t *validity = duckdb_vector_get_validity(vector);
+
+    if (validity)
+    {
+        for (idx_t i = 0; i < chunk_size; i++)
+            if (duckdb_validity_row_is_valid(validity, i))
+                terms[i] = enif_make_int(env, data[i]);
+            else
+                terms[i] = am_nil;
+    }
+    else
+    {
+        for (idx_t i = 0; i < chunk_size; i++)
+            terms[i] = enif_make_int(env, data[i]);
+    }
+
+    return enif_make_list_from_array(env, terms, chunk_size);
+}
+
+static ERL_NIF_TERM
+make_int64s_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
+{
+    ERL_NIF_TERM terms[chunk_size];
+    int64_t *data = (int64_t *)duckdb_vector_get_data(vector);
+    uint64_t *validity = duckdb_vector_get_validity(vector);
+
+    if (validity)
+    {
+        for (idx_t i = 0; i < chunk_size; i++)
+            if (duckdb_validity_row_is_valid(validity, i))
+                terms[i] = enif_make_int64(env, data[i]);
+            else
+                terms[i] = am_nil;
+    }
+    else
+    {
+        for (idx_t i = 0; i < chunk_size; i++)
+            terms[i] = enif_make_int64(env, data[i]);
+    }
+
+    return enif_make_list_from_array(env, terms, chunk_size);
+}
+
+static ERL_NIF_TERM
+make_uint8s_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
+{
+    ERL_NIF_TERM terms[chunk_size];
+    uint8_t *data = (uint8_t *)duckdb_vector_get_data(vector);
+    uint64_t *validity = duckdb_vector_get_validity(vector);
+
+    if (validity)
+    {
+        for (idx_t i = 0; i < chunk_size; i++)
+            if (duckdb_validity_row_is_valid(validity, i))
+                terms[i] = enif_make_uint(env, data[i]);
+            else
+                terms[i] = am_nil;
+    }
+    else
+    {
+        for (idx_t i = 0; i < chunk_size; i++)
+            terms[i] = enif_make_uint(env, data[i]);
+    }
+
+    return enif_make_list_from_array(env, terms, chunk_size);
+}
+
+static ERL_NIF_TERM
+make_uint16s_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
+{
+    ERL_NIF_TERM terms[chunk_size];
+    uint16_t *data = (uint16_t *)duckdb_vector_get_data(vector);
+    uint64_t *validity = duckdb_vector_get_validity(vector);
+
+    if (validity)
+    {
+        for (idx_t i = 0; i < chunk_size; i++)
+            if (duckdb_validity_row_is_valid(validity, i))
+                terms[i] = enif_make_uint(env, data[i]);
+            else
+                terms[i] = am_nil;
+    }
+    else
+    {
+        for (idx_t i = 0; i < chunk_size; i++)
+            terms[i] = enif_make_uint(env, data[i]);
+    }
+
+    return enif_make_list_from_array(env, terms, chunk_size);
+}
+
+static ERL_NIF_TERM
+make_uint32s_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
+{
+    ERL_NIF_TERM terms[chunk_size];
+    uint32_t *data = (uint32_t *)duckdb_vector_get_data(vector);
+    uint64_t *validity = duckdb_vector_get_validity(vector);
+
+    if (validity)
+    {
+        for (idx_t i = 0; i < chunk_size; i++)
+            if (duckdb_validity_row_is_valid(validity, i))
+                terms[i] = enif_make_uint(env, data[i]);
+            else
+                terms[i] = am_nil;
+    }
+    else
+    {
+        for (idx_t i = 0; i < chunk_size; i++)
+            terms[i] = enif_make_uint(env, data[i]);
+    }
+
+    return enif_make_list_from_array(env, terms, chunk_size);
+}
+
+static ERL_NIF_TERM
+make_uint64s_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
+{
+    ERL_NIF_TERM terms[chunk_size];
+    uint64_t *data = (uint64_t *)duckdb_vector_get_data(vector);
+    uint64_t *validity = duckdb_vector_get_validity(vector);
+
+    if (validity)
+    {
+        for (idx_t i = 0; i < chunk_size; i++)
+            if (duckdb_validity_row_is_valid(validity, i))
+                terms[i] = enif_make_uint64(env, data[i]);
+            else
+                terms[i] = am_nil;
+    }
+    else
+    {
+        for (idx_t i = 0; i < chunk_size; i++)
+            terms[i] = enif_make_uint64(env, data[i]);
+    }
+
+    return enif_make_list_from_array(env, terms, chunk_size);
+}
+
+static ERL_NIF_TERM
+make_f32s_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
+{
+    ERL_NIF_TERM terms[chunk_size];
+    float *data = (float *)duckdb_vector_get_data(vector);
+    uint64_t *validity = duckdb_vector_get_validity(vector);
+
+    if (validity)
+    {
+        for (idx_t i = 0; i < chunk_size; i++)
+            if (duckdb_validity_row_is_valid(validity, i))
+                terms[i] = enif_make_double(env, data[i]);
+            else
+                terms[i] = am_nil;
+    }
+    else
+    {
+        for (idx_t i = 0; i < chunk_size; i++)
+            terms[i] = enif_make_double(env, data[i]);
+    }
+
+    return enif_make_list_from_array(env, terms, chunk_size);
+}
+
+static ERL_NIF_TERM
+make_f64s_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
+{
+    ERL_NIF_TERM terms[chunk_size];
+    double *data = (double *)duckdb_vector_get_data(vector);
+    uint64_t *validity = duckdb_vector_get_validity(vector);
+
+    if (validity)
+    {
+        for (idx_t i = 0; i < chunk_size; i++)
+            if (duckdb_validity_row_is_valid(validity, i))
+                terms[i] = enif_make_double(env, data[i]);
+            else
+                terms[i] = am_nil;
+    }
+    else
+    {
+        for (idx_t i = 0; i < chunk_size; i++)
+            terms[i] = enif_make_double(env, data[i]);
+    }
+
+    return enif_make_list_from_array(env, terms, chunk_size);
+}
+
+static ERL_NIF_TERM
+make_dates_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
+{
+    ERL_NIF_TERM terms[chunk_size];
+    duckdb_date *data = (duckdb_date *)duckdb_vector_get_data(vector);
+    uint64_t *validity = duckdb_vector_get_validity(vector);
+
+    if (validity)
+    {
+        for (idx_t i = 0; i < chunk_size; i++)
+            if (duckdb_validity_row_is_valid(validity, i))
+                terms[i] = make_date(env, duckdb_from_date(data[i]));
+            else
+                terms[i] = am_nil;
+    }
+    else
+    {
+        for (idx_t i = 0; i < chunk_size; i++)
+            terms[i] = make_date(env, duckdb_from_date(data[i]));
+    }
+
+    return enif_make_list_from_array(env, terms, chunk_size);
+}
+
+static ERL_NIF_TERM
+make_times_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
+{
+    ERL_NIF_TERM terms[chunk_size];
+    duckdb_time *data = (duckdb_time *)duckdb_vector_get_data(vector);
+    uint64_t *validity = duckdb_vector_get_validity(vector);
+
+    if (validity)
+    {
+        for (idx_t i = 0; i < chunk_size; i++)
+            if (duckdb_validity_row_is_valid(validity, i))
+                terms[i] = make_time(env, duckdb_from_time(data[i]));
+            else
+                terms[i] = am_nil;
+    }
+    else
+    {
+        for (idx_t i = 0; i < chunk_size; i++)
+            terms[i] = make_time(env, duckdb_from_time(data[i]));
+    }
+
+    return enif_make_list_from_array(env, terms, chunk_size);
+}
+
+static ERL_NIF_TERM
+make_binaries_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
+{
+    ERL_NIF_TERM terms[chunk_size];
+    duckdb_string_t *data = (duckdb_string_t *)duckdb_vector_get_data(vector);
+    uint64_t *validity = duckdb_vector_get_validity(vector);
+
+    if (validity)
+    {
+        for (idx_t i = 0; i < chunk_size; i++)
+            if (duckdb_validity_row_is_valid(validity, i))
+            {
+                duckdb_string_t str = data[i];
+                terms[i] = make_binary(env, duckdb_string_t_data(&str), duckdb_string_t_length(str));
+            }
+            else
+                terms[i] = am_nil;
+    }
+    else
+    {
+        for (idx_t i = 0; i < chunk_size; i++)
+        {
+            duckdb_string_t str = data[i];
+            terms[i] = make_binary(env, duckdb_string_t_data(&str), duckdb_string_t_length(str));
+        }
+    }
+
+    return enif_make_list_from_array(env, terms, chunk_size);
+}
+
+static ERL_NIF_TERM
+make_naive_datetimes_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
+{
+    ERL_NIF_TERM terms[chunk_size];
+    duckdb_timestamp *data = (duckdb_timestamp *)duckdb_vector_get_data(vector);
+    uint64_t *validity = duckdb_vector_get_validity(vector);
+
+    if (validity)
+    {
+        for (idx_t i = 0; i < chunk_size; i++)
+            if (duckdb_validity_row_is_valid(validity, i))
+                terms[i] = make_naive_datetime(env, duckdb_from_timestamp(data[i]));
+            else
+                terms[i] = am_nil;
+    }
+    else
+    {
+        for (idx_t i = 0; i < chunk_size; i++)
+            terms[i] = make_naive_datetime(env, duckdb_from_timestamp(data[i]));
+    }
+
+    return enif_make_list_from_array(env, terms, chunk_size);
+}
+
+// TODO inline
+static ERL_NIF_TERM
+make_hugeint(ErlNifEnv *env, duckdb_hugeint hi)
+{
+    return enif_make_tuple2(env, enif_make_int64(env, hi.upper), enif_make_uint64(env, hi.lower));
+}
+
+// TODO inline
+static ERL_NIF_TERM
+make_uhugeint(ErlNifEnv *env, duckdb_uhugeint hi)
+{
+    return enif_make_tuple2(env, enif_make_uint64(env, hi.upper), enif_make_uint64(env, hi.lower));
+}
+
+static ERL_NIF_TERM
+make_int128s_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
+{
+    ERL_NIF_TERM terms[chunk_size];
+    duckdb_hugeint *data = (duckdb_hugeint *)duckdb_vector_get_data(vector);
+    uint64_t *validity = duckdb_vector_get_validity(vector);
+
+    if (validity)
+    {
+        for (idx_t i = 0; i < chunk_size; i++)
+            if (duckdb_validity_row_is_valid(validity, i))
+                terms[i] = make_hugeint(env, data[i]);
+            else
+                terms[i] = am_nil;
+    }
+    else
+    {
+        for (idx_t i = 0; i < chunk_size; i++)
+            terms[i] = make_hugeint(env, data[i]);
+    }
+
+    return enif_make_list_from_array(env, terms, chunk_size);
+}
+
+static ERL_NIF_TERM
+make_uint128s_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
+{
+    ERL_NIF_TERM terms[chunk_size];
+    duckdb_uhugeint *data = (duckdb_uhugeint *)duckdb_vector_get_data(vector);
+    uint64_t *validity = duckdb_vector_get_validity(vector);
+
+    if (validity)
+    {
+        for (idx_t i = 0; i < chunk_size; i++)
+            if (duckdb_validity_row_is_valid(validity, i))
+                terms[i] = make_uhugeint(env, data[i]);
+            else
+                terms[i] = am_nil;
+    }
+    else
+    {
+        for (idx_t i = 0; i < chunk_size; i++)
+            terms[i] = make_uhugeint(env, data[i]);
+    }
+
+    return enif_make_list_from_array(env, terms, chunk_size);
+}
+
 static ERL_NIF_TERM
 duxdb_data_chunk_get_vector(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
@@ -694,257 +1124,69 @@ duxdb_data_chunk_get_vector(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     if (!vector)
         return make_badarg(env, argv[1]);
 
-    uint64_t *validity = duckdb_vector_get_validity(vector);
-    void *data = duckdb_vector_get_data(vector);
-
     duckdb_logical_type logical_type = duckdb_vector_get_column_type(vector);
     duckdb_type type = duckdb_get_type_id(logical_type);
     duckdb_destroy_logical_type(&logical_type);
 
-    ERL_NIF_TERM terms[chunk_size];
-
-    // TODO refactor
-    for (idx_t i = 0; i < chunk_size; i++)
-    {
-        if (duckdb_validity_row_is_valid(validity, i))
-        {
-            switch (type)
-            {
-            case DUCKDB_TYPE_BOOLEAN:
-            {
-                terms[i] = ((bool *)data)[i] ? am_true : am_false;
-                break;
-            }
-
-            case DUCKDB_TYPE_TINYINT:
-            {
-                terms[i] = enif_make_int(env, ((int8_t *)data)[i]);
-                break;
-            }
-
-            case DUCKDB_TYPE_SMALLINT:
-            {
-                terms[i] = enif_make_int(env, ((int16_t *)data)[i]);
-                break;
-            }
-
-            case DUCKDB_TYPE_INTEGER:
-            {
-                terms[i] = enif_make_int(env, ((int32_t *)data)[i]);
-                break;
-            }
-
-            case DUCKDB_TYPE_BIGINT:
-            {
-                terms[i] = enif_make_int64(env, ((int64_t *)data)[i]);
-                break;
-            }
-
-            case DUCKDB_TYPE_UTINYINT:
-            {
-                terms[i] = enif_make_uint(env, ((uint8_t *)data)[i]);
-                break;
-            }
-
-            case DUCKDB_TYPE_USMALLINT:
-            {
-                terms[i] = enif_make_uint(env, ((uint16_t *)data)[i]);
-                break;
-            }
-
-            case DUCKDB_TYPE_UINTEGER:
-            {
-                terms[i] = enif_make_uint(env, ((uint32_t *)data)[i]);
-                break;
-            }
-
-            case DUCKDB_TYPE_UBIGINT:
-            {
-                terms[i] = enif_make_uint64(env, ((uint64_t *)data)[i]);
-                break;
-            }
-
-            case DUCKDB_TYPE_FLOAT:
-            {
-                terms[i] = enif_make_double(env, ((float *)data)[i]);
-                break;
-            }
-
-            case DUCKDB_TYPE_DOUBLE:
-            {
-                terms[i] = enif_make_double(env, ((double *)data)[i]);
-                break;
-            }
-
-            case DUCKDB_TYPE_DATE:
-            {
-                duckdb_date d = ((duckdb_date *)data)[i];
-                duckdb_date_struct ds = duckdb_from_date(d);
-                terms[i] = make_date(env, ds);
-                break;
-            }
-
-            case DUCKDB_TYPE_TIME:
-            {
-                duckdb_time t = ((duckdb_time *)data)[i];
-                duckdb_time_struct ts = duckdb_from_time(t);
-                terms[i] = make_time(env, ts);
-                break;
-            }
-
-            case DUCKDB_TYPE_INTERVAL:
-            {
-                terms[i] = am_nil;
-                break;
-            }
-
-            case DUCKDB_TYPE_HUGEINT:
-            {
-                duckdb_hugeint hi = ((duckdb_hugeint *)data)[i];
-                terms[i] = enif_make_tuple2(env, enif_make_int64(env, hi.upper), enif_make_uint64(env, hi.lower));
-                break;
-            }
-
-            case DUCKDB_TYPE_UHUGEINT:
-            {
-                duckdb_uhugeint uhi = ((duckdb_uhugeint *)data)[i];
-                terms[i] = enif_make_tuple2(env, enif_make_uint64(env, uhi.upper), enif_make_uint64(env, uhi.lower));
-                break;
-            }
-
-            case DUCKDB_TYPE_VARCHAR:
-            case DUCKDB_TYPE_BLOB:
-            {
-                duckdb_string_t str = ((duckdb_string_t *)data)[i];
-                terms[i] = make_binary(env, duckdb_string_t_data(&str), duckdb_string_t_length(str));
-                break;
-            }
-
-            // TODO
-            case DUCKDB_TYPE_DECIMAL:
-            {
-                duckdb_decimal dec = ((duckdb_decimal *)data)[i];
-                terms[i] = enif_make_double(env, duckdb_decimal_to_double(dec));
-                break;
-            }
-
-            case DUCKDB_TYPE_TIMESTAMP:
-            case DUCKDB_TYPE_TIMESTAMP_S:
-            case DUCKDB_TYPE_TIMESTAMP_MS:
-            // TODO test nanosecond one
-            case DUCKDB_TYPE_TIMESTAMP_NS:
-            {
-                duckdb_timestamp ts = ((duckdb_timestamp *)data)[i];
-                terms[i] = make_naive_datetime(env, type, duckdb_from_timestamp(ts));
-                break;
-            }
-
-            case DUCKDB_TYPE_ENUM:
-            {
-                terms[i] = am_nil;
-                break;
-            }
-
-            case DUCKDB_TYPE_LIST:
-            {
-                terms[i] = am_nil;
-                break;
-            }
-
-            case DUCKDB_TYPE_STRUCT:
-            {
-                terms[i] = am_nil;
-                break;
-            }
-
-            case DUCKDB_TYPE_MAP:
-            {
-                terms[i] = am_nil;
-                break;
-            }
-
-            case DUCKDB_TYPE_ARRAY:
-            {
-                terms[i] = am_nil;
-                break;
-            }
-
-            case DUCKDB_TYPE_UUID:
-            {
-                terms[i] = am_nil;
-                break;
-            }
-
-            case DUCKDB_TYPE_UNION:
-            {
-                terms[i] = am_nil;
-                break;
-            }
-
-            case DUCKDB_TYPE_BIT:
-            {
-                terms[i] = am_nil;
-                break;
-            }
-
-            case DUCKDB_TYPE_TIME_TZ:
-            {
-                duckdb_time_tz ttz = ((duckdb_time_tz *)data)[i];
-                duckdb_time_tz_struct ts = duckdb_from_time_tz(ttz);
-                enif_fprintf(stderr, "DUCKDB_TYPE_TIME_TZ offset: %d\n", ts.offset);
-                terms[i] = make_time(env, ts.time);
-                break;
-            }
-
-            case DUCKDB_TYPE_TIMESTAMP_TZ:
-            {
-                terms[i] = am_nil;
-                break;
-            }
-
-            case DUCKDB_TYPE_ANY:
-            {
-                terms[i] = am_nil;
-                break;
-            }
-
-            case DUCKDB_TYPE_VARINT:
-            {
-                terms[i] = am_nil;
-                break;
-            }
-
-            case DUCKDB_TYPE_SQLNULL:
-            {
-                terms[i] = am_nil;
-                break;
-            }
-
-            default:
-            {
-                // TODO raise exception
-                terms[i] = am_nil;
-                break;
-            }
-            }
-        }
-        else
-        {
-            terms[i] = am_nil;
-        }
-    }
-
-    ERL_NIF_TERM ret = enif_make_list_from_array(env, terms, chunk_size);
-
-    // TODO
     switch (type)
     {
+    case DUCKDB_TYPE_BOOLEAN:
+        return make_bools_from_vector(env, chunk_size, vector);
+
+    case DUCKDB_TYPE_INTEGER:
+        return make_int32s_from_vector(env, chunk_size, vector);
+    case DUCKDB_TYPE_UINTEGER:
+        return make_uint32s_from_vector(env, chunk_size, vector);
+
+    case DUCKDB_TYPE_VARCHAR:
+    case DUCKDB_TYPE_BLOB:
+        return make_binaries_from_vector(env, chunk_size, vector);
+
+    case DUCKDB_TYPE_BIGINT:
+        return make_int64s_from_vector(env, chunk_size, vector);
+    case DUCKDB_TYPE_UBIGINT:
+        return make_uint64s_from_vector(env, chunk_size, vector);
+
+    case DUCKDB_TYPE_FLOAT:
+        return make_f32s_from_vector(env, chunk_size, vector);
+    case DUCKDB_TYPE_DOUBLE:
+        return make_f64s_from_vector(env, chunk_size, vector);
+
+    case DUCKDB_TYPE_TIMESTAMP:
+    case DUCKDB_TYPE_TIMESTAMP_S:
+    case DUCKDB_TYPE_TIMESTAMP_MS:
+    case DUCKDB_TYPE_TIMESTAMP_NS:
+        return make_naive_datetimes_from_vector(env, chunk_size, vector);
+
+    case DUCKDB_TYPE_DATE:
+        return make_dates_from_vector(env, chunk_size, vector);
+    case DUCKDB_TYPE_TIME:
+        return make_times_from_vector(env, chunk_size, vector);
+
+    case DUCKDB_TYPE_TINYINT:
+        return make_int8s_from_vector(env, chunk_size, vector);
+    case DUCKDB_TYPE_SMALLINT:
+        return make_int16s_from_vector(env, chunk_size, vector);
+
+    case DUCKDB_TYPE_UTINYINT:
+        return make_uint8s_from_vector(env, chunk_size, vector);
+    case DUCKDB_TYPE_USMALLINT:
+        return make_uint16s_from_vector(env, chunk_size, vector);
+
     case DUCKDB_TYPE_HUGEINT:
-        return enif_make_tuple2(env, enif_make_int(env, DUCKDB_TYPE_HUGEINT), ret);
+    {
+        ERL_NIF_TERM i128s = make_int128s_from_vector(env, chunk_size, vector);
+        return enif_make_tuple2(env, enif_make_int(env, DUCKDB_TYPE_HUGEINT), i128s);
+    }
     case DUCKDB_TYPE_UHUGEINT:
-        return enif_make_tuple2(env, enif_make_int(env, DUCKDB_TYPE_UHUGEINT), ret);
+    {
+        ERL_NIF_TERM u128s = make_uint128s_from_vector(env, chunk_size, vector);
+        return enif_make_tuple2(env, enif_make_int(env, DUCKDB_TYPE_UHUGEINT), u128s);
+    }
+
     default:
-        return ret;
+        // TODO
+        return make_badarg(env, enif_make_tuple2(env, enif_make_atom(env, "DUCKDB_TYPE"), enif_make_int(env, type)));
     }
 }
 
