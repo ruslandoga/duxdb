@@ -68,17 +68,6 @@ defmodule DuxDB do
   defp set_config(_config, _name, _option), do: :erlang.nif_error(:undef)
   defp destroy_config(_config), do: :erlang.nif_error(:undef)
 
-  defp build_config(config, options) do
-    Enum.each(options, fn {name, option} ->
-      with :error <- set_config(config, c_str(name), c_str(option)) do
-        raise ArgumentError,
-          message: "invalid config option #{inspect(options)} for #{inspect(name)}"
-      end
-    end)
-
-    config
-  end
-
   @doc """
   Opens an in-memory DuckDB database.
 
@@ -118,7 +107,9 @@ defmodule DuxDB do
     config = if maybe_options, do: create_config()
 
     try do
-      config = if config, do: build_config(config, maybe_options)
+      if config do
+        set_config_options(config, maybe_options)
+      end
 
       case open_ext(path, config) do
         db when is_reference(db) -> db
@@ -132,6 +123,15 @@ defmodule DuxDB do
   end
 
   defp open_ext(_path, _config), do: :erlang.nif_error(:undef)
+
+  defp set_config_options(config, options) do
+    Enum.each(options, fn {name, option} ->
+      with :error <- set_config(config, c_str(name), c_str(option)) do
+        raise ArgumentError,
+          message: "invalid config option #{inspect(options)} for #{inspect(name)}"
+      end
+    end)
+  end
 
   @doc """
   Closes a DuckDB database.
