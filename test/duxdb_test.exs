@@ -46,6 +46,16 @@ defmodule DuxDBTest do
     end
   end
 
+  test "NULL mask" do
+    assert DuxDB.open()
+           |> DuxDB.connect()
+           |> DuxDB.query(
+             "SELECT CASE WHEN i%2=0 THEN NULL ELSE i END res_col FROM range(10) t(i)"
+           )
+           |> DuxDB.fetch_chunk()
+           |> DuxDB.data_chunk_get_vector(0) == [nil, 1, nil, 3, nil, 5, nil, 7, nil, 9]
+  end
+
   describe "DUCKDB_TYPE" do
     setup do
       conn = DuxDB.connect(DuxDB.open())
