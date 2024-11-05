@@ -19,9 +19,7 @@ export DUXDB_LDFLAGS=-L/opt/homebrew/opt/duckdb/lib
 ```
 
 ```elixir
-Mix.install([
-  {:duxdb, github: "ruslandoga/duxdb"}
-])
+Mix.install([{:duxdb, github: "ruslandoga/duxdb"}], force: true)
 
 db = DuxDB.open(":memory:", %{"max_memory" => "1GB"})
 conn = DuxDB.connect(db)
