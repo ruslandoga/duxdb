@@ -46,7 +46,7 @@ defmodule DuxDBTest do
     end
   end
 
-  test "NULL mask" do
+  test "reading NULL mask" do
     assert DuxDB.open()
            |> DuxDB.connect()
            |> DuxDB.query(
@@ -54,6 +54,27 @@ defmodule DuxDBTest do
            )
            |> DuxDB.fetch_chunk()
            |> DuxDB.data_chunk_get_vector(0) == [nil, 1, nil, 3, nil, 5, nil, 7, nil, 9]
+  end
+
+  test "reading string vector" do
+    assert DuxDB.open()
+           |> DuxDB.connect()
+           |> DuxDB.query(
+             "SELECT CASE WHEN i%2=0 THEN CONCAT('short_', i) ELSE CONCAT('longstringprefix', i) END FROM range(10) t(i)"
+           )
+           |> DuxDB.fetch_chunk()
+           |> DuxDB.data_chunk_get_vector(0) == [
+             "short_0",
+             "longstringprefix1",
+             "short_2",
+             "longstringprefix3",
+             "short_4",
+             "longstringprefix5",
+             "short_6",
+             "longstringprefix7",
+             "short_8",
+             "longstringprefix9"
+           ]
   end
 
   describe "DUCKDB_TYPE" do
