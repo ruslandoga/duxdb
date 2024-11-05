@@ -8,10 +8,10 @@ Here's an example of how it can be used on its own:
 brew install duckdb llvm
 
 duckdb --version
-# v1.1.2 f680b7d08f
+# v1.1.3 19864453f7
 
 clang --version
-# Homebrew clang version 19.1.2
+# Homebrew clang version 19.1.3
 
 export CC=$(which clang)
 export DUXDB_CFLAGS=-std=c23
@@ -42,9 +42,9 @@ DuxDB.bind_date(stmt, DuxDB.bind_parameter_index(stmt, "day"), ~D[2025-03-14])
 result = DuxDB.execute_prepared(stmt)
 
 chunks =
-  Stream.repeatedly(fn -> DuxDB.fetch_chunk(result) end)
-  |> Stream.take_while(&is_reference/1)
-  |> Enum.map(fn chunk ->
+  Stream.repeatedly(fn -> DuxDB.fetch_chunk(result) end) |> 
+  Stream.take_while(&is_reference/1) |>
+  Enum.map(fn chunk ->
     Map.new(0..DuxDB.column_count(result) - 1, fn i ->
       {DuxDB.column_name(result, i), DuxDB.data_chunk_get_vector(chunk, i)}
     end)
