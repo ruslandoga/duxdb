@@ -394,12 +394,24 @@ duxdb_destroy_config(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 static ERL_NIF_TERM
 duxdb_open_ext(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
+    const char *duck_path;
     ErlNifBinary path;
-    if (!enif_inspect_iolist_as_binary(env, argv[0], &path))
+
+    if (enif_inspect_iolist_as_binary(env, argv[0], &path))
+        duck_path = (const char *)path.data;
+    else if (enif_is_identical(argv[0], am_nil))
+        duck_path = NULL;
+    else
         return make_badarg(env, argv[0]);
 
+    duckdb_config duck_config;
     duxdb_config *config;
-    if (!enif_get_resource(env, argv[1], config_t, (void **)&config) || !(config->duck))
+
+    if (enif_get_resource(env, argv[1], config_t, (void **)&config) && (config->duck))
+        duck_config = config->duck;
+    else if (enif_is_identical(argv[1], am_nil))
+        duck_config = NULL;
+    else
         return make_badarg(env, argv[1]);
 
     duxdb_db *db = enif_alloc_resource(db_t, sizeof(duxdb_db));
@@ -411,7 +423,7 @@ duxdb_open_ext(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     db->duck = NULL;
 
     char *errstr;
-    if (duckdb_open_ext((const char *)path.data, &db->duck, config->duck, &errstr) == DuckDBError)
+    if (duckdb_open_ext(duck_path, &db->duck, duck_config, &errstr) == DuckDBError)
     {
         assert(db->duck == NULL);
         enif_release_resource(db);

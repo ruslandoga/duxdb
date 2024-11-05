@@ -21,7 +21,7 @@ defmodule DuxDBTest do
 
   describe "close/1" do
     setup do
-      {:ok, db: DuxDB.open(":memory:")}
+      {:ok, db: DuxDB.open()}
     end
 
     test "is no-op if already closed", %{db: db} do
@@ -37,7 +37,7 @@ defmodule DuxDBTest do
 
   describe "disconnect/1" do
     setup do
-      {:ok, conn: DuxDB.connect(DuxDB.open(":memory:"))}
+      {:ok, conn: DuxDB.connect(DuxDB.open())}
     end
 
     test "is no-op if already disconnected", %{conn: conn} do
@@ -48,7 +48,7 @@ defmodule DuxDBTest do
 
   describe "DUCKDB_TYPE" do
     setup do
-      conn = DuxDB.connect(DuxDB.open(":memory:"))
+      conn = DuxDB.connect(DuxDB.open())
 
       query = fn sql ->
         result = DuxDB.query(conn, sql)
@@ -143,7 +143,7 @@ defmodule DuxDBTest do
 
   describe "bind and fetch" do
     setup do
-      {:ok, conn: DuxDB.connect(DuxDB.open(":memory:"))}
+      {:ok, conn: DuxDB.connect(DuxDB.open())}
     end
 
     property "all supported data types", %{conn: conn} do

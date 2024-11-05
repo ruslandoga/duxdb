@@ -80,10 +80,21 @@ defmodule DuxDB do
   end
 
   @doc """
+  Opens an in-memory DuckDB database.
+
+      iex> db = DuxDB.open()
+      iex> is_reference(db)
+      true
+
+  """
+  @spec open :: db
+  def open, do: open(_path = nil, _config = nil)
+
+  @doc """
   Same as `open/2` but without config.
   """
-  @spec open(Path.t()) :: db
-  def open(path), do: open(path, _config = [])
+  @spec open(Path.t() | nil) :: db
+  def open(maybe_path), do: open(maybe_path, _config = nil)
 
   @doc """
   Opens a DuckDB database with a configuration.
@@ -94,24 +105,29 @@ defmodule DuxDB do
       true
 
       iex> bad_path = "/this/path/not/exists/test.db "
-      iex> DuxDB.open(bad_path, _config = [])
+      iex> DuxDB.open(bad_path)
       ** (ArgumentError) IO Error: Cannot open file "/this/path/not/exists/test.db ": No such file or directory
 
   The database is closed with `close/1` or on garbage collection.
 
   See https://duckdb.org/docs/api/c/api#duckdb_open_ext
   """
-  @spec open(Path.t(), Enumerable.t()) :: db
-  def open(path, options) do
-    config = create_config()
+  @spec open(Path.t() | nil, Enumerable.t() | nil) :: db
+  def open(maybe_path, maybe_options) do
+    path = if maybe_path, do: c_str(maybe_path)
+    config = if maybe_options, do: create_config()
 
     try do
-      case open_ext(c_str(path), build_config(config, options)) do
+      config = if config, do: build_config(config, maybe_options)
+
+      case open_ext(path, config) do
         db when is_reference(db) -> db
         error when is_binary(error) -> raise ArgumentError, message: error
       end
     after
-      destroy_config(config)
+      if config do
+        destroy_config(config)
+      end
     end
   end
 
@@ -132,7 +148,7 @@ defmodule DuxDB do
   @doc """
   Connects to a DuckDB database.
 
-      iex> db = DuxDB.open(":memory:")
+      iex> db = DuxDB.open()
       iex> conn = DuxDB.connect(db)
       iex> is_reference(conn)
       true
@@ -147,8 +163,7 @@ defmodule DuxDB do
   @doc """
   Interrupts a running query.
 
-      iex> db = DuxDB.open(":memory:")
-      iex> conn = DuxDB.connect(db)
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> DuxDB.interrupt(conn)
       :ok
 
@@ -160,8 +175,7 @@ defmodule DuxDB do
   @doc """
   Gets progress of the running query.
 
-      iex> db = DuxDB.open(":memory:")
-      iex> conn = DuxDB.connect(db)
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> DuxDB.query_progress(conn)
       {_percentage = -1.0, _rows_processed = 0, _total_rows_to_process = 0}
 
@@ -178,8 +192,7 @@ defmodule DuxDB do
   @doc """
   Disconnects from a DuckDB database.
 
-      iex> db = DuxDB.open(":memory:")
-      iex> conn = DuxDB.connect(db)
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> DuxDB.disconnect(conn)
       :ok
 
@@ -197,7 +210,7 @@ defmodule DuxDB do
 
     Example:
 
-        iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+        iex> conn = DuxDB.connect(DuxDB.open())
         iex> try do DuxDB.query(conn, "sel 1") rescue e -> e end
         %DuxDB.Error{code: 14, message: "Parser Error: syntax error at or near \"sel\"\nLINE 1: sel 1\n        ^"}
 
@@ -215,12 +228,12 @@ defmodule DuxDB do
   > Executing a lengthy query can degrade the VM's responsiveness.
   > If you expect the query to take longer than 1 millisecond, consider using `query_dirty_cpu/2` or `query_dirty_io/2` instead.
 
-      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> result = DuxDB.query(conn, "SELECT 42")
       iex> is_reference(result)
       true
 
-      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> DuxDB.query(conn, "SEL 42")
       ** (DuxDB.Error) Parser Error: syntax error at or near "SEL"
       LINE 1: SEL 42
@@ -269,7 +282,7 @@ defmodule DuxDB do
   @doc """
   Closes the result and de-allocates all memory allocated for that connection.
 
-      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> result = DuxDB.query(conn, "SELECT 42")
       iex> DuxDB.destroy_result(result)
       :ok
@@ -282,12 +295,12 @@ defmodule DuxDB do
   @doc """
   Returns the column name of the specified column. Returns `nil` if the column is out of range.
 
-      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> result = DuxDB.query(conn, "SELECT 42 AS answer")
       iex> DuxDB.column_name(result, 0)
       "answer"
 
-      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> result = DuxDB.query(conn, "SELECT 42 AS answer")
       iex> DuxDB.column_name(result, 1)
       nil
@@ -300,7 +313,7 @@ defmodule DuxDB do
   @doc """
   Returns the statement type of the statement that was executed.
 
-      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> result = DuxDB.query(conn, "SELECT 42 AS answer")
       iex> DuxDB.result_statement_type(result)
       _select = 1
@@ -313,7 +326,7 @@ defmodule DuxDB do
   @doc """
   Returns the number of columns present in a the result object.
 
-      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> result = DuxDB.query(conn, "SELECT 42 AS answer, 'six times seven' AS question")
       iex> DuxDB.column_count(result)
       2
@@ -328,7 +341,7 @@ defmodule DuxDB do
   This is relevant only for INSERT/UPDATE/DELETE queries.
   For other queries the rows_changed will be 0.
 
-      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> result = DuxDB.query(conn, "SELECT 42 AS answer, 'six times seven' AS question")
       iex> DuxDB.rows_changed(result)
       0
@@ -341,7 +354,7 @@ defmodule DuxDB do
   @doc """
   Returns the return_type of the given result.
 
-      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> result = DuxDB.query(conn, "SELECT 42")
       iex> DuxDB.result_return_type(result)
       _query_result = 3
@@ -354,7 +367,7 @@ defmodule DuxDB do
   @doc """
   Fetches the next chunk of data from the result.
 
-      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> chunk = DuxDB.fetch_chunk(DuxDB.query(conn, "SELECT 42 AS answer"))
       iex> is_reference(chunk)
       true
@@ -369,7 +382,7 @@ defmodule DuxDB do
   @doc """
   Destroys the data chunk and de-allocates all memory allocated for that chunk.
 
-      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> chunk = DuxDB.fetch_chunk(DuxDB.query(conn, "SELECT 42 AS answer"))
       iex> DuxDB.destroy_data_chunk(chunk)
       :ok
@@ -382,7 +395,7 @@ defmodule DuxDB do
   @doc """
   Retrieves the number of columns in a data chunk.
 
-      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> chunk = DuxDB.fetch_chunk(DuxDB.query(conn, "SELECT 42 AS answer, 'six times seven' AS question"))
       iex> DuxDB.data_chunk_get_column_count(chunk)
       2
@@ -397,7 +410,7 @@ defmodule DuxDB do
   @doc """
   Retrieves the vector (as a list) at the specified column index in the data chunk.
 
-      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> sql = \"""
       ...> SELECT * FROM (VALUES
       ...>   (1, 'Alice', DATE '2023-01-01', TRUE),
@@ -432,12 +445,12 @@ defmodule DuxDB do
   @doc """
   Creates a prepared statement object from a query.
 
-      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> stmt = DuxDB.prepare(conn, "SELECT ?")
       iex> is_reference(stmt)
       true
 
-      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> DuxDB.prepare(conn, "SEL ?")
       ** (ArgumentError) Parser Error: syntax error at or near "SEL"
       LINE 1: SEL ?
@@ -460,7 +473,7 @@ defmodule DuxDB do
   @doc """
   Destroys the prepared statement object.
 
-      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> stmt = DuxDB.prepare(conn, "SELECT ?")
       iex> DuxDB.destroy_prepare(stmt)
       :ok
@@ -473,7 +486,7 @@ defmodule DuxDB do
   @doc """
   Returns the number of parameters that can be provided to the given prepared statement.
 
-      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> stmt = DuxDB.prepare(conn, "SELECT ?, ?")
       iex> DuxDB.nparams(stmt)
       2
@@ -486,7 +499,7 @@ defmodule DuxDB do
   @doc """
   Returns the name used to identify the parameter.
 
-      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> stmt = DuxDB.prepare(conn, "SELECT $a, $b")
       iex> [DuxDB.parameter_name(stmt, 1), DuxDB.parameter_name(stmt, 2)]
       ["a", "b"]
@@ -499,7 +512,7 @@ defmodule DuxDB do
   @doc """
   Returns the parameter type for the parameter at the given index.
 
-      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> DuxDB.query(conn, "CREATE TABLE a (i INTEGER)")
       iex> stmt = DuxDB.prepare(conn, "INSERT INTO a VALUES (?)")
       iex> DuxDB.param_type(stmt, 1)
@@ -513,7 +526,7 @@ defmodule DuxDB do
   @doc """
   Retrieves the index of the parameter for the prepared statement, identified by name.
 
-      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> stmt = DuxDB.prepare(conn, "SELECT $name")
       iex> DuxDB.bind_parameter_index(stmt, "name")
       1
@@ -530,7 +543,7 @@ defmodule DuxDB do
   @doc """
   Clears the params bind to the prepared statement.
 
-      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> stmt = DuxDB.prepare(conn, "SELECT ?")
       iex> DuxDB.clear_bindings(stmt)
       :ok
@@ -543,7 +556,7 @@ defmodule DuxDB do
   @doc """
   Returns the statement type of the statement to be executed.
 
-      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> stmt = DuxDB.prepare(conn, "SELECT 42")
       iex> DuxDB.prepared_statement_type(stmt)
       _select = 1
@@ -561,7 +574,7 @@ defmodule DuxDB do
   > Executing a lengthy prepared statement can degrade the VM's responsiveness.
   > If you expect the prepared statement to take longer than 1 millisecond, consider using `execute_prepared_dirty_cpu/2` or `execute_prepared_dirty_io/2` instead.
 
-      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> result = DuxDB.execute_prepared(DuxDB.prepare(conn, "SELECT 42"))
       iex> is_reference(result)
       true
@@ -609,7 +622,7 @@ defmodule DuxDB do
   @doc """
   Binds a boolean value to the specified parameter index.
 
-      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> stmt = DuxDB.prepare(conn, "SELECT ?")
       iex> DuxDB.bind_boolean(stmt, 1, true)
       :ok
@@ -622,7 +635,7 @@ defmodule DuxDB do
   @doc """
   Binds a floating point number to the specified parameter index.
 
-      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> stmt = DuxDB.prepare(conn, "SELECT ?")
       iex> DuxDB.bind_double(stmt, 1, 3.14)
       :ok
@@ -635,7 +648,7 @@ defmodule DuxDB do
   @doc """
   Binds a signed 64-bit integer to the specified parameter index.
 
-      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> stmt = DuxDB.prepare(conn, "SELECT ?")
       iex> DuxDB.bind_int64(stmt, 1, -3)
       :ok
@@ -648,7 +661,7 @@ defmodule DuxDB do
   @doc """
   Binds an unsigned 64-bit integer to the specified parameter index.
 
-      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> stmt = DuxDB.prepare(conn, "SELECT ?")
       iex> DuxDB.bind_uint64(stmt, 1, 3)
       :ok
@@ -661,7 +674,7 @@ defmodule DuxDB do
   @doc """
   Binds a text value to the specified parameter index.
 
-      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> stmt = DuxDB.prepare(conn, "SELECT ?")
       iex> DuxDB.bind_varchar(stmt, 1, "hello, world")
       :ok
@@ -673,19 +686,19 @@ defmodule DuxDB do
 
   (TODO improve) Raises `ArgumentError` on invalid index:
 
-      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> stmt = DuxDB.prepare(conn, "SELECT ?")
       iex> DuxDB.bind_varchar(stmt, _bad_index = 2, "hello, world")
       ** (ArgumentError) argument error: "hello, world"
 
   Raises `ArgumentError` on invalid text:
 
-      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> stmt = DuxDB.prepare(conn, "SELECT ?")
       iex> DuxDB.bind_varchar(stmt, 0, _not_text = 1)
       ** (ArgumentError) argument error: 1
 
-      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> stmt = DuxDB.prepare(conn, "SELECT ?")
       iex> DuxDB.bind_varchar(stmt, 0, _not_printable = <<1, 2, 3>>)
       ** (ArgumentError) argument error: <<1, 2, 3>>
@@ -698,7 +711,7 @@ defmodule DuxDB do
   @doc """
   Binds a binary blob to the specified parameter index.
 
-      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> stmt = DuxDB.prepare(conn, "SELECT ?")
       iex> DuxDB.bind_blob(stmt, 1, <<1, 2, 3>>)
       :ok
@@ -713,7 +726,7 @@ defmodule DuxDB do
   @doc """
   Binds a date (as days since 1970-01-01) to the specified parameter index.
 
-      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> stmt = DuxDB.prepare(conn, "SELECT ?")
       iex> DuxDB.bind_date(stmt, 1, Date.utc_today())
       :ok
@@ -732,7 +745,7 @@ defmodule DuxDB do
   @doc """
   Binds a time (as microseconds since midnight) to the specified parameter index.
 
-      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> stmt = DuxDB.prepare(conn, "SELECT ?")
       iex> DuxDB.bind_time(stmt, 1, Time.utc_now())
       :ok
@@ -754,7 +767,7 @@ defmodule DuxDB do
   @doc """
   Binds a timestamp (as microseconds since 1970-01-01 00:00:00) to the specified parameter index.
 
-      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> stmt = DuxDB.prepare(conn, "SELECT ?")
       iex> :ok = DuxDB.bind_timestamp(stmt, 1, DateTime.utc_now())
       iex> DuxDB.bind_timestamp(stmt, 1, NaiveDateTime.utc_now())
@@ -785,7 +798,7 @@ defmodule DuxDB do
   @doc """
   Binds a HUGEINT (128 bit integer) to the specified parameter index.
 
-      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> stmt = DuxDB.prepare(conn, "SELECT ?")
       iex> DuxDB.bind_hugeint(stmt, 1, 0xFFFFFFFFFFFFFFFFF)
       :ok
@@ -831,7 +844,7 @@ defmodule DuxDB do
   @doc """
   Binds an UHUGEINT (128 bit unsigned integer) to the specified parameter index.
 
-      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> stmt = DuxDB.prepare(conn, "SELECT ?")
       iex> DuxDB.bind_uhugeint(stmt, 1, 0xFFFFFFFFFFFFFFFFF)
       :ok
@@ -853,7 +866,7 @@ defmodule DuxDB do
   @doc """
   Binds a NULL value to the specified parameter index.
 
-      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> conn = DuxDB.connect(DuxDB.open())
       iex> stmt = DuxDB.prepare(conn, "SELECT ?")
       iex> DuxDB.bind_null(stmt, 1)
       :ok
