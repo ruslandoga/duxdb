@@ -497,6 +497,20 @@ defmodule DuxDB do
   def parameter_name(_stmt, _idx), do: :erlang.nif_error(:undef)
 
   @doc """
+  Returns the parameter type for the parameter at the given index.
+
+      iex> conn = DuxDB.connect(DuxDB.open(":memory:"))
+      iex> DuxDB.query(conn, "CREATE TABLE a (i INTEGER)")
+      iex> stmt = DuxDB.prepare(conn, "INSERT INTO a VALUES (?)")
+      iex> DuxDB.param_type(stmt, 1)
+      4
+
+  See https://duckdb.org/docs/api/c/api#duckdb_param_type
+  """
+  @spec param_type(stmt, non_neg_integer) :: integer
+  def param_type(_stmt, _idx), do: :erlang.nif_error(:undef)
+
+  @doc """
   Retrieves the index of the parameter for the prepared statement, identified by name.
 
       iex> conn = DuxDB.connect(DuxDB.open(":memory:"))

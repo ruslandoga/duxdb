@@ -1,7 +1,6 @@
 - maybe don't expose result and data_chunk, just fetch it all, the results are materialized in DuckDB anyway, no need to step through them
 - open/0
 - don't create config in open/1
-- param_type/2
 - execute_prepared_streaming
 - extract_statements
 - prepare_extracted_statement

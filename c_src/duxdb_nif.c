@@ -1266,6 +1266,24 @@ duxdb_parameter_name(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
+duxdb_param_type(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    duxdb_stmt *stmt;
+    if (!enif_get_resource(env, argv[0], stmt_t, (void **)&stmt) || !(stmt->duck))
+        return make_badarg(env, argv[0]);
+
+    ErlNifUInt64 idx;
+    if (!enif_get_uint64(env, argv[1], &idx))
+        return make_badarg(env, argv[1]);
+
+    duckdb_type param_type = duckdb_param_type(stmt->duck, idx);
+    if (param_type == DUCKDB_TYPE_INVALID)
+        return make_badarg(env, argv[1]);
+
+    return enif_make_int(env, param_type);
+}
+
+static ERL_NIF_TERM
 duxdb_bind_parameter_index(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
     duxdb_stmt *stmt;
@@ -1618,6 +1636,7 @@ static ErlNifFunc nif_funcs[] = {
     {"destroy_prepare", 1, duxdb_destroy_prepare, 0},
     {"nparams", 1, duxdb_nparams, 0},
     {"parameter_name", 2, duxdb_parameter_name, 0},
+    {"param_type", 2, duxdb_param_type, 0},
     {"bind_parameter_index_nif", 2, duxdb_bind_parameter_index, 0},
     {"clear_bindings", 1, duxdb_clear_bindings, 0},
     {"prepared_statement_type", 1, duxdb_prepared_statement_type, 0},
