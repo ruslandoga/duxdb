@@ -189,113 +189,6 @@ make_binary(ErlNifEnv *env, const char *bytes, size_t size)
     return bin;
 }
 
-// TODO inline
-// TODO finite / infinite
-static ERL_NIF_TERM
-make_date(ErlNifEnv *env, const duckdb_date_struct date_struct)
-{
-    ERL_NIF_TERM date;
-
-    // TODO handle error
-    enif_make_map_from_arrays(
-        env,
-        (ERL_NIF_TERM[]){
-            am___struct__,
-            am_calendar,
-            am_year,
-            am_month,
-            am_day},
-        (ERL_NIF_TERM[]){
-            am_elixir_date,
-            am_elixir_calendar_iso,
-            enif_make_int(env, date_struct.year),
-            enif_make_int(env, date_struct.month),
-            enif_make_int(env, date_struct.day)},
-        5,
-        &date);
-
-    return date;
-}
-
-// // TODO
-// int micros_precision(int32_t microseconds)
-// {
-//     if (microseconds == 0)
-//         return 0;
-//     if (microseconds % 1000 == 0)
-//         return 3;
-//     return 6;
-// }
-
-// TODO inline
-static ERL_NIF_TERM
-make_time(ErlNifEnv *env, const duckdb_time_struct time_struct)
-{
-    ERL_NIF_TERM time;
-
-    // TODO handle error
-    enif_make_map_from_arrays(
-        env,
-        (ERL_NIF_TERM[]){
-            am___struct__,
-            am_calendar,
-            am_hour,
-            am_minute,
-            am_second,
-            am_microsecond},
-        (ERL_NIF_TERM[]){
-            am_elixir_time,
-            am_elixir_calendar_iso,
-            enif_make_int(env, time_struct.hour),
-            enif_make_int(env, time_struct.min),
-            enif_make_int(env, time_struct.sec),
-            enif_make_tuple2(env, enif_make_int(env, time_struct.micros), enif_make_int(env, 6))},
-        6,
-        &time);
-
-    return time;
-}
-
-// TODO inline
-// TODO finite / infinite
-static ERL_NIF_TERM
-make_naive_datetime(ErlNifEnv *env, const duckdb_timestamp_struct ts)
-{
-
-    duckdb_date_struct d = ts.date;
-    duckdb_time_struct t = ts.time;
-
-    ERL_NIF_TERM datetime;
-
-    // TODO handle error
-    enif_make_map_from_arrays(
-        env,
-        (ERL_NIF_TERM[]){
-            am___struct__,
-            am_calendar,
-            am_year,
-            am_month,
-            am_day,
-            am_hour,
-            am_minute,
-            am_second,
-            am_microsecond},
-        (ERL_NIF_TERM[]){
-            am_elixir_naive_date_time,
-            am_elixir_calendar_iso,
-            enif_make_int(env, d.year),
-            enif_make_int(env, d.month),
-            enif_make_int(env, d.day),
-            enif_make_int(env, t.hour),
-            enif_make_int(env, t.min),
-            enif_make_int(env, t.sec),
-            enif_make_tuple2(env, enif_make_int(env, t.micros), enif_make_int(env, 6))},
-        9,
-        &datetime);
-
-    return datetime;
-}
-
 static ERL_NIF_TERM
 make_badarg(ErlNifEnv *env, ERL_NIF_TERM arg)
 {
@@ -691,7 +584,7 @@ duxdb_data_chunk_get_column_count(ErlNifEnv *env, int argc, const ERL_NIF_TERM a
 
 // TODO: this are silly, maybe macros?
 
-static ERL_NIF_TERM
+static inline ERL_NIF_TERM
 make_bools_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
 {
     ERL_NIF_TERM terms[chunk_size];
@@ -715,7 +608,7 @@ make_bools_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
     return enif_make_list_from_array(env, terms, chunk_size);
 }
 
-static ERL_NIF_TERM
+static inline ERL_NIF_TERM
 make_int8s_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
 {
     ERL_NIF_TERM terms[chunk_size];
@@ -739,7 +632,7 @@ make_int8s_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
     return enif_make_list_from_array(env, terms, chunk_size);
 }
 
-static ERL_NIF_TERM
+static inline ERL_NIF_TERM
 make_int16s_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
 {
     ERL_NIF_TERM terms[chunk_size];
@@ -763,7 +656,7 @@ make_int16s_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
     return enif_make_list_from_array(env, terms, chunk_size);
 }
 
-static ERL_NIF_TERM
+static inline ERL_NIF_TERM
 make_int32s_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
 {
     ERL_NIF_TERM terms[chunk_size];
@@ -787,7 +680,7 @@ make_int32s_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
     return enif_make_list_from_array(env, terms, chunk_size);
 }
 
-static ERL_NIF_TERM
+static inline ERL_NIF_TERM
 make_int64s_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
 {
     ERL_NIF_TERM terms[chunk_size];
@@ -811,7 +704,7 @@ make_int64s_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
     return enif_make_list_from_array(env, terms, chunk_size);
 }
 
-static ERL_NIF_TERM
+static inline ERL_NIF_TERM
 make_uint8s_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
 {
     ERL_NIF_TERM terms[chunk_size];
@@ -835,7 +728,7 @@ make_uint8s_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
     return enif_make_list_from_array(env, terms, chunk_size);
 }
 
-static ERL_NIF_TERM
+static inline ERL_NIF_TERM
 make_uint16s_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
 {
     ERL_NIF_TERM terms[chunk_size];
@@ -859,7 +752,7 @@ make_uint16s_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
     return enif_make_list_from_array(env, terms, chunk_size);
 }
 
-static ERL_NIF_TERM
+static inline ERL_NIF_TERM
 make_uint32s_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
 {
     ERL_NIF_TERM terms[chunk_size];
@@ -883,7 +776,7 @@ make_uint32s_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
     return enif_make_list_from_array(env, terms, chunk_size);
 }
 
-static ERL_NIF_TERM
+static inline ERL_NIF_TERM
 make_uint64s_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
 {
     ERL_NIF_TERM terms[chunk_size];
@@ -907,7 +800,7 @@ make_uint64s_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
     return enif_make_list_from_array(env, terms, chunk_size);
 }
 
-static ERL_NIF_TERM
+static inline ERL_NIF_TERM
 make_f32s_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
 {
     ERL_NIF_TERM terms[chunk_size];
@@ -931,7 +824,7 @@ make_f32s_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
     return enif_make_list_from_array(env, terms, chunk_size);
 }
 
-static ERL_NIF_TERM
+static inline ERL_NIF_TERM
 make_f64s_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
 {
     ERL_NIF_TERM terms[chunk_size];
@@ -955,7 +848,34 @@ make_f64s_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
     return enif_make_list_from_array(env, terms, chunk_size);
 }
 
-static ERL_NIF_TERM
+// TODO finite / infinite
+static inline ERL_NIF_TERM
+make_date(ErlNifEnv *env, const duckdb_date_struct date_struct)
+{
+    ERL_NIF_TERM date;
+
+    // TODO handle error
+    enif_make_map_from_arrays(
+        env,
+        (ERL_NIF_TERM[]){
+            am___struct__,
+            am_calendar,
+            am_year,
+            am_month,
+            am_day},
+        (ERL_NIF_TERM[]){
+            am_elixir_date,
+            am_elixir_calendar_iso,
+            enif_make_int(env, date_struct.year),
+            enif_make_int(env, date_struct.month),
+            enif_make_int(env, date_struct.day)},
+        5,
+        &date);
+
+    return date;
+}
+
+static inline ERL_NIF_TERM
 make_dates_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
 {
     ERL_NIF_TERM terms[chunk_size];
@@ -979,7 +899,45 @@ make_dates_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
     return enif_make_list_from_array(env, terms, chunk_size);
 }
 
-static ERL_NIF_TERM
+// // TODO
+// int micros_precision(int32_t microseconds)
+// {
+//     if (microseconds == 0)
+//         return 0;
+//     if (microseconds % 1000 == 0)
+//         return 3;
+//     return 6;
+// }
+
+static inline ERL_NIF_TERM
+make_time(ErlNifEnv *env, const duckdb_time_struct time_struct)
+{
+    ERL_NIF_TERM time;
+
+    // TODO handle error
+    enif_make_map_from_arrays(
+        env,
+        (ERL_NIF_TERM[]){
+            am___struct__,
+            am_calendar,
+            am_hour,
+            am_minute,
+            am_second,
+            am_microsecond},
+        (ERL_NIF_TERM[]){
+            am_elixir_time,
+            am_elixir_calendar_iso,
+            enif_make_int(env, time_struct.hour),
+            enif_make_int(env, time_struct.min),
+            enif_make_int(env, time_struct.sec),
+            enif_make_tuple2(env, enif_make_int(env, time_struct.micros), enif_make_int(env, 6))},
+        6,
+        &time);
+
+    return time;
+}
+
+static inline ERL_NIF_TERM
 make_times_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
 {
     ERL_NIF_TERM terms[chunk_size];
@@ -1003,7 +961,7 @@ make_times_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
     return enif_make_list_from_array(env, terms, chunk_size);
 }
 
-static ERL_NIF_TERM
+static inline ERL_NIF_TERM
 make_binaries_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
 {
     ERL_NIF_TERM terms[chunk_size];
@@ -1033,7 +991,46 @@ make_binaries_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector
     return enif_make_list_from_array(env, terms, chunk_size);
 }
 
-static ERL_NIF_TERM
+// TODO finite / infinite
+static inline ERL_NIF_TERM
+make_naive_datetime(ErlNifEnv *env, const duckdb_timestamp_struct ts)
+{
+
+    duckdb_date_struct d = ts.date;
+    duckdb_time_struct t = ts.time;
+
+    ERL_NIF_TERM datetime;
+
+    // TODO handle error
+    enif_make_map_from_arrays(
+        env,
+        (ERL_NIF_TERM[]){
+            am___struct__,
+            am_calendar,
+            am_year,
+            am_month,
+            am_day,
+            am_hour,
+            am_minute,
+            am_second,
+            am_microsecond},
+        (ERL_NIF_TERM[]){
+            am_elixir_naive_date_time,
+            am_elixir_calendar_iso,
+            enif_make_int(env, d.year),
+            enif_make_int(env, d.month),
+            enif_make_int(env, d.day),
+            enif_make_int(env, t.hour),
+            enif_make_int(env, t.min),
+            enif_make_int(env, t.sec),
+            enif_make_tuple2(env, enif_make_int(env, t.micros), enif_make_int(env, 6))},
+        9,
+        &datetime);
+
+    return datetime;
+}
+
+static inline ERL_NIF_TERM
 make_naive_datetimes_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
 {
     ERL_NIF_TERM terms[chunk_size];
@@ -1057,21 +1054,13 @@ make_naive_datetimes_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector
     return enif_make_list_from_array(env, terms, chunk_size);
 }
 
-// TODO inline
-static ERL_NIF_TERM
+static inline ERL_NIF_TERM
 make_hugeint(ErlNifEnv *env, duckdb_hugeint hi)
 {
     return enif_make_tuple2(env, enif_make_int64(env, hi.upper), enif_make_uint64(env, hi.lower));
 }
 
-// TODO inline
-static ERL_NIF_TERM
-make_uhugeint(ErlNifEnv *env, duckdb_uhugeint hi)
-{
-    return enif_make_tuple2(env, enif_make_uint64(env, hi.upper), enif_make_uint64(env, hi.lower));
-}
-
-static ERL_NIF_TERM
+static inline ERL_NIF_TERM
 make_int128s_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
 {
     ERL_NIF_TERM terms[chunk_size];
@@ -1095,7 +1084,13 @@ make_int128s_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
     return enif_make_list_from_array(env, terms, chunk_size);
 }
 
-static ERL_NIF_TERM
+static inline ERL_NIF_TERM
+make_uhugeint(ErlNifEnv *env, duckdb_uhugeint hi)
+{
+    return enif_make_tuple2(env, enif_make_uint64(env, hi.upper), enif_make_uint64(env, hi.lower));
+}
+
+static inline ERL_NIF_TERM
 make_uint128s_from_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)
 {
     ERL_NIF_TERM terms[chunk_size];
