@@ -226,7 +226,8 @@ defmodule DuxDB do
   > ### Runs on a main scheduler. {: .warning}
   >
   > Executing a lengthy query can degrade the VM's responsiveness.
-  > If you expect the query to take longer than 1 millisecond, consider using `query_dirty_cpu/2` or `query_dirty_io/2` instead.
+  > If you expect the query to take longer than 1 millisecond,
+  > consider using `query_dirty_cpu/2` or `query_dirty_io/2` instead.
 
       iex> conn = DuxDB.connect(DuxDB.open())
       iex> result = DuxDB.query(conn, "SELECT 42")
@@ -567,12 +568,15 @@ defmodule DuxDB do
   def prepared_statement_type(_stmt), do: :erlang.nif_error(:undef)
 
   @doc """
-  Executes the prepared statement with the given bound parameters, and returns a materialized query result.
+  Executes the prepared statement with the given bound parameters,
+  and returns a materialized query result.
 
   > ### Runs on a main scheduler. {: .warning}
   >
   > Executing a lengthy prepared statement can degrade the VM's responsiveness.
-  > If you expect the prepared statement to take longer than 1 millisecond, consider using `execute_prepared_dirty_cpu/2` or `execute_prepared_dirty_io/2` instead.
+  > If you expect the prepared statement to take longer than 1 millisecond,
+  > consider using `execute_prepared_dirty_cpu/2` or
+  > `execute_prepared_dirty_io/2` instead.
 
       iex> conn = DuxDB.connect(DuxDB.open())
       iex> result = DuxDB.execute_prepared(DuxDB.prepare(conn, "SELECT 42"))
