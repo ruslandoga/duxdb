@@ -843,6 +843,10 @@ defmodule DuxDB do
     [upper * @upper_base + lower | unwrap_hugeints(rest)]
   end
 
+  defp unwrap_hugeints([nested | rest]) when is_list(nested) do
+    [unwrap_hugeints(nested) | unwrap_hugeints(rest)]
+  end
+
   defp unwrap_hugeints([] = done), do: done
 
   @doc """
