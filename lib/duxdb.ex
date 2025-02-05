@@ -22,7 +22,7 @@ defmodule DuxDB do
   Returns the version of the linked DuckDB library.
 
       iex> DuxDB.library_version()
-      "v1.1.3"
+      "v1.2.0"
 
   See https://duckdb.org/docs/api/c/api#duckdb_library_version
   """
@@ -33,7 +33,7 @@ defmodule DuxDB do
   Returns the total amount of configuration options available.
 
       iex> DuxDB.config_count()
-      100
+      170
 
   See https://duckdb.org/docs/api/c/api#duckdb_config_count
   """
@@ -49,15 +49,23 @@ defmodule DuxDB do
       iex> all_config_flags = Enum.map(0..DuxDB.config_count() - 1, fn idx ->
       ...>   DuxDB.get_config_flag(idx)
       ...> end)
-      iex> all_config_flags |> Enum.drop(19) |> Enum.take(3)
+      iex> all_config_flags |> Enum.drop(23) |> Enum.take(6)
       [
-        {"allow_unsigned_extensions", "Allow to load extensions with invalid or missing signatures"},
-        {"allow_community_extensions", "Allow to load community built extensions"},
-        {"allow_extensions_metadata_mismatch", "Allow to load extensions with not compatible metadata"}
+        {"debug_asof_iejoin",
+         "DEBUG SETTING: force use of IEJoin to implement AsOf joins"},
+        {"debug_checkpoint_abort",
+         "DEBUG SETTING: trigger an abort while checkpointing for testing purposes"},
+        {"debug_force_external",
+         "DEBUG SETTING: force out-of-core computation for operators that support it, used for testing"},
+        {"debug_force_no_cross_product",
+         "DEBUG SETTING: Force disable cross product generation when hyper graph isn't connected, used for testing"},
+        {"debug_skip_checkpoint_on_commit",
+         "DEBUG SETTING: skip checkpointing on commit"},
+        {"debug_window_mode", "DEBUG SETTING: switch window mode to use"}
       ]
 
       iex> DuxDB.get_config_flag(DuxDB.config_count() + 1)
-      ** (ArgumentError) argument error: 101
+      ** (ArgumentError) argument error: 171
 
   See https://duckdb.org/docs/api/c/api#duckdb_get_config_flag
   """
@@ -212,7 +220,7 @@ defmodule DuxDB do
 
         iex> conn = DuxDB.connect(DuxDB.open())
         iex> try do DuxDB.query(conn, "sel 1") rescue e -> e end
-        %DuxDB.Error{code: 14, message: "Parser Error: syntax error at or near \"sel\"\nLINE 1: sel 1\n        ^"}
+        %DuxDB.Error{code: 14, message: "Parser Error: syntax error at or near \"sel\"\n\nLINE 1: sel 1\n        ^"}
 
     """
 
@@ -220,7 +228,7 @@ defmodule DuxDB do
     defexception [:code, :message]
   end
 
-  @doc """
+  @doc ~S"""
   Executes an SQL query within a connection and stores the full (materialized) result in the returned reference.
 
   > ### Runs on a main scheduler. {: .warning}
@@ -235,10 +243,8 @@ defmodule DuxDB do
       true
 
       iex> conn = DuxDB.connect(DuxDB.open())
-      iex> DuxDB.query(conn, "SEL 42")
-      ** (DuxDB.Error) Parser Error: syntax error at or near "SEL"
-      LINE 1: SEL 42
-              ^
+      iex> try do DuxDB.query(conn, "SEL 42") rescue e -> e end
+      %DuxDB.Error{code: 14, message: "Parser Error: syntax error at or near \"SEL\"\n\nLINE 1: SEL 42\n        ^"}
 
   The result is destroyed with `destroy_result/1` or on garbage collection.
 
@@ -443,7 +449,7 @@ defmodule DuxDB do
 
   defp data_chunk_get_vector_nif(_data_chunk, _idx), do: :erlang.nif_error(:undef)
 
-  @doc """
+  @doc ~S"""
   Creates a prepared statement object from a query.
 
       iex> conn = DuxDB.connect(DuxDB.open())
@@ -452,10 +458,8 @@ defmodule DuxDB do
       true
 
       iex> conn = DuxDB.connect(DuxDB.open())
-      iex> DuxDB.prepare(conn, "SEL ?")
-      ** (ArgumentError) Parser Error: syntax error at or near "SEL"
-      LINE 1: SEL ?
-              ^
+      iex> try do DuxDB.prepare(conn, "SEL ?") rescue e -> e end
+      %ArgumentError{message: "Parser Error: syntax error at or near \"SEL\"\n\nLINE 1: SEL ?\n        ^"}
 
   The statement is destroyed with `destroy_prepare/1` or on garbage collection.
 

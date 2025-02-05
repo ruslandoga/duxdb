@@ -13,7 +13,7 @@ Here's how it can be used on its own:
 brew install duckdb llvm
 
 duckdb --version
-# v1.1.3 19864453f7
+# v1.2.0 5f5512b827
 
 clang --version
 # Homebrew clang version 19.1.3
