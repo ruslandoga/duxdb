@@ -22,7 +22,7 @@ defmodule DuxDB do
   Returns the version of the linked DuckDB library.
 
       iex> DuxDB.library_version()
-      "v1.2.0"
+      "v1.2.1"
 
   See https://duckdb.org/docs/api/c/api#duckdb_library_version
   """
@@ -33,7 +33,7 @@ defmodule DuxDB do
   Returns the total amount of configuration options available.
 
       iex> DuxDB.config_count()
-      170
+      173
 
   See https://duckdb.org/docs/api/c/api#duckdb_config_count
   """
@@ -65,7 +65,7 @@ defmodule DuxDB do
       ]
 
       iex> DuxDB.get_config_flag(DuxDB.config_count() + 1)
-      ** (ArgumentError) argument error: 171
+      ** (ArgumentError) argument error: 174
 
   See https://duckdb.org/docs/api/c/api#duckdb_get_config_flag
   """
