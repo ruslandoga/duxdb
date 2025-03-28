@@ -210,6 +210,7 @@ duxdb_create_config(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     if (!config)
         return enif_raise_exception(env, am_system_limit);
 
+    // TODO config->duck = NULL;
     if (duckdb_create_config(&config->duck) == DuckDBError)
     {
         enif_release_resource(config);
@@ -433,6 +434,7 @@ duxdb_query(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     if (!result)
         return enif_raise_exception(env, am_system_limit);
 
+    // TODO result->duck.internal_data = NULL;
     if (duckdb_query(conn->duck, (const char *)query.data, &result->duck) == DuckDBError)
     {
         enif_release_resource(result);
@@ -543,6 +545,7 @@ duxdb_fetch_chunk(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     if (!chunk)
         return enif_raise_exception(env, am_system_limit);
 
+    // TODO chunk->duck = NULL;
     chunk->duck = duckdb_fetch_chunk(result->duck);
     if (!chunk->duck)
     {
@@ -846,6 +849,7 @@ duxdb_prepare_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     if (!stmt)
         return enif_raise_exception(env, am_system_limit);
 
+    // TODO stmt->duck = NULL;
     if (duckdb_prepare(conn->duck, (const char *)query.data, &stmt->duck) == DuckDBError)
     {
         enif_release_resource(stmt);
@@ -977,10 +981,9 @@ duxdb_execute_prepared(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     if (!result)
         return enif_raise_exception(env, am_system_limit);
 
+    // TODO result->duck.internal_data = NULL;
     if (duckdb_execute_prepared(stmt->duck, &result->duck) == DuckDBError)
     {
-        enif_release_resource(result);
-
         int error_type = (int)duckdb_result_error_type(&result->duck);
         ERL_NIF_TERM errc = enif_make_int(env, error_type);
 
@@ -989,6 +992,7 @@ duxdb_execute_prepared(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 
         duckdb_destroy_result(&result->duck);
         assert(result->duck.internal_data == NULL);
+        enif_release_resource(result);
 
         return enif_make_tuple2(env, errc, errmsg);
     }
