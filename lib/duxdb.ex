@@ -801,6 +801,32 @@ defmodule DuxDB do
   def bind_timestamp(stmt, idx, micros), do: bind_timestamp_nif(stmt, idx, micros)
   defp bind_timestamp_nif(_stmt, _idx, _micros), do: :erlang.nif_error(:undef)
 
+  @doc """
+  Binds a duckdb_interval value to the prepared statement at the specified index.
+
+      iex> conn = DuxDB.connect(DuxDB.open())
+      iex> stmt = DuxDB.prepare(conn, "SELECT ?")
+      iex> DuxDB.bind_interval(stmt, 1, Duration.new!(second: 42, year: 1999))
+      :ok
+
+  See https://duckdb.org/docs/stable/clients/c/api.html#duckdb_bind_interval
+  """
+  @spec bind_interval(stmt, non_neg_integer, Duration.t()) :: :ok
+  def bind_interval(stmt, idx, %Duration{} = duration) do
+    months = duration.year * 12 + duration.month
+    days = duration.week * 7 + duration.day
+
+    micros =
+      (duration.hour * 3_600 +
+         duration.minute * 60 +
+         duration.second) * 1_000_000 +
+        elem(duration.microsecond, 0)
+
+    bind_interval_nif(stmt, idx, months, days, micros)
+  end
+
+  defp bind_interval_nif(_stmt, _idx, _months, _days, _micros), do: :erlang.nif_error(:undef)
+
   @upper_base Bitwise.bsl(2, 63)
 
   @doc """

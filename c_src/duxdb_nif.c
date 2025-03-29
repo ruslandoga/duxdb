@@ -15,6 +15,7 @@ static ERL_NIF_TERM am___struct__;
 static ERL_NIF_TERM am_calendar;
 static ERL_NIF_TERM am_year;
 static ERL_NIF_TERM am_month;
+static ERL_NIF_TERM am_week;
 static ERL_NIF_TERM am_day;
 static ERL_NIF_TERM am_hour;
 static ERL_NIF_TERM am_minute;
@@ -23,6 +24,7 @@ static ERL_NIF_TERM am_microsecond;
 static ERL_NIF_TERM am_elixir_date;
 static ERL_NIF_TERM am_elixir_time;
 static ERL_NIF_TERM am_elixir_naive_date_time;
+static ERL_NIF_TERM am_elixir_duration;
 static ERL_NIF_TERM am_elixir_calendar_iso;
 
 static ErlNifResourceType *config_t;
@@ -142,6 +144,7 @@ on_load(ErlNifEnv *env, void **priv, ERL_NIF_TERM info)
     am_calendar = enif_make_atom(env, "calendar");
     am_year = enif_make_atom(env, "year");
     am_month = enif_make_atom(env, "month");
+    am_week = enif_make_atom(env, "week");
     am_day = enif_make_atom(env, "day");
     am_hour = enif_make_atom(env, "hour");
     am_minute = enif_make_atom(env, "minute");
@@ -150,6 +153,7 @@ on_load(ErlNifEnv *env, void **priv, ERL_NIF_TERM info)
     am_elixir_date = enif_make_atom(env, "Elixir.Date");
     am_elixir_time = enif_make_atom(env, "Elixir.Time");
     am_elixir_naive_date_time = enif_make_atom(env, "Elixir.NaiveDateTime");
+    am_elixir_duration = enif_make_atom(env, "Elixir.Duration");
     am_elixir_calendar_iso = enif_make_atom(env, "Elixir.Calendar.ISO");
 
     config_t = enif_open_resource_type(env, "duxdb", "config", config_destructor, ERL_NIF_RT_CREATE, NULL);
@@ -697,6 +701,42 @@ make_naive_datetime(ErlNifEnv *env, const duckdb_timestamp duck_timestamp)
 }
 
 static inline ERL_NIF_TERM
+make_duration(ErlNifEnv *env, const duckdb_interval i)
+{
+    ERL_NIF_TERM erl_duration;
+    int64_t total_seconds = i.micros / 1000000;
+    int64_t remaining_micros = i.micros % 1000000;
+
+    ERL_NIF_TERM keys[] = {
+        am___struct__,
+        am_year,
+        am_month,
+        am_week,
+        am_day,
+        am_hour,
+        am_minute,
+        am_second,
+        am_microsecond};
+
+    ERL_NIF_TERM values[] = {
+        am_elixir_duration,
+        enif_make_int(env, 0),
+        enif_make_int(env, i.months),
+        enif_make_int(env, 0),
+        enif_make_int(env, i.days),
+        enif_make_int(env, 0),
+        enif_make_int(env, 0),
+        enif_make_int(env, total_seconds),
+        enif_make_tuple2(env, enif_make_int(env, remaining_micros), enif_make_int(env, 6))};
+
+    // TODO
+    if (!enif_make_map_from_arrays(env, keys, values, 9, &erl_duration))
+        return enif_make_badarg(env);
+
+    return erl_duration;
+}
+
+static inline ERL_NIF_TERM
 make_hugeint(ErlNifEnv *env, duckdb_hugeint hi)
 {
     return enif_make_tuple2(env, enif_make_int64(env, hi.upper), enif_make_uint64(env, hi.lower));
@@ -747,6 +787,7 @@ MAKE_LIST_FROM_VECTOR(double, enif_make_double)
 MAKE_LIST_FROM_VECTOR(duckdb_date, make_date)
 MAKE_LIST_FROM_VECTOR(duckdb_time, make_time)
 MAKE_LIST_FROM_VECTOR(duckdb_timestamp, make_naive_datetime)
+MAKE_LIST_FROM_VECTOR(duckdb_interval, make_duration)
 MAKE_LIST_FROM_VECTOR(duckdb_string_t, make_binary_from_duckdb_string)
 MAKE_LIST_FROM_VECTOR(duckdb_hugeint, make_hugeint)
 MAKE_LIST_FROM_VECTOR(duckdb_uhugeint, make_uhugeint)
@@ -806,6 +847,8 @@ duxdb_data_chunk_get_vector(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
         return make_list_from_duckdb_date_vector(env, chunk_size, vector);
     case DUCKDB_TYPE_TIME:
         return make_list_from_duckdb_time_vector(env, chunk_size, vector);
+    case DUCKDB_TYPE_INTERVAL:
+        return make_list_from_duckdb_interval_vector(env, chunk_size, vector);
 
     case DUCKDB_TYPE_TINYINT:
         return make_list_from_int8_t_vector(env, chunk_size, vector);
@@ -1179,6 +1222,36 @@ duxdb_bind_timestamp(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
+duxdb_bind_interval(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    duxdb_stmt *stmt;
+    if (!enif_get_resource(env, argv[0], stmt_t, (void **)&stmt) || !(stmt->duck))
+        return make_badarg(env, argv[0]);
+
+    ErlNifUInt64 idx;
+    if (!enif_get_uint64(env, argv[1], &idx))
+        return make_badarg(env, argv[1]);
+
+    int months;
+    if (!enif_get_int(env, argv[2], &months))
+        return make_badarg(env, argv[2]);
+
+    int days;
+    if (!enif_get_int(env, argv[3], &days))
+        return make_badarg(env, argv[3]);
+
+    ErlNifSInt64 micros;
+    if (!enif_get_int64(env, argv[4], &micros))
+        return make_badarg(env, argv[4]);
+
+    duckdb_interval interval = {.months = months, .days = days, .micros = micros};
+    if (duckdb_bind_interval(stmt->duck, idx, interval) == DuckDBError)
+        return make_badarg(env, argv[1]);
+
+    return am_ok;
+}
+
+static ERL_NIF_TERM
 duxdb_bind_hugeint(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
     duxdb_stmt *stmt;
@@ -1300,6 +1373,7 @@ static ErlNifFunc nif_funcs[] = {
     {"bind_date_nif", 3, duxdb_bind_date, 0},
     {"bind_time_nif", 3, duxdb_bind_time, 0},
     {"bind_timestamp_nif", 3, duxdb_bind_timestamp, 0},
+    {"bind_interval_nif", 5, duxdb_bind_interval, 0},
     {"bind_hugeint_nif", 4, duxdb_bind_hugeint, 0},
     {"bind_uhugeint_nif", 4, duxdb_bind_uhugeint, 0},
     {"bind_null", 2, duxdb_bind_null, 0},

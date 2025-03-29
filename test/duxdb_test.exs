@@ -141,6 +141,41 @@ defmodule DuxDBTest do
       end
     end
 
+    test "INTERVAL", %{query: query} do
+      assert query.("select interval '1 day'") == Duration.new!(day: 1, microsecond: {0, 6})
+      assert query.("select interval '2 months'") == Duration.new!(month: 2, microsecond: {0, 6})
+      assert query.("select interval '1 year'") == Duration.new!(month: 12, microsecond: {0, 6})
+      assert query.("select interval '3 weeks'") == Duration.new!(day: 21, microsecond: {0, 6})
+
+      assert query.("select interval '1 hour'") ==
+               Duration.new!(second: 3600, microsecond: {0, 6})
+
+      assert query.("select interval '1 minute'") ==
+               Duration.new!(second: 60, microsecond: {0, 6})
+
+      assert query.("select interval '1 second'") == Duration.new!(second: 1, microsecond: {0, 6})
+      assert query.("select interval '1 millisecond'") == Duration.new!(microsecond: {1000, 6})
+      assert query.("select interval '123 microseconds'") == Duration.new!(microsecond: {123, 6})
+
+      assert query.("select to_seconds(2000) ") ==
+               Duration.new!(second: 2000, microsecond: {0, 6})
+
+      assert query.(
+               "select interval '1 year 2 months 3 days 4 hours 5 minutes 6 seconds 789 milliseconds'"
+             ) ==
+               Duration.new!(
+                 month: 14,
+                 day: 3,
+                 second: 14706,
+                 microsecond: {789_000, 6}
+               )
+
+      assert query.("select interval '-1 day -2 hours -3 minutes'") ==
+               Duration.new!(day: -1, second: -7380, microsecond: {0, 6})
+
+      assert query.("select interval '0' seconds") == Duration.new!(microsecond: {0, 6})
+    end
+
     property "HUGEINT", %{query: query} do
       check all(i <- integer()) do
         assert query.("select HUGEINT '#{i}'") == i
