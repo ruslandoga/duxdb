@@ -841,6 +841,7 @@ duxdb_data_chunk_get_vector(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     case DUCKDB_TYPE_TIMESTAMP_S:
     case DUCKDB_TYPE_TIMESTAMP_MS:
     case DUCKDB_TYPE_TIMESTAMP_NS:
+    case DUCKDB_TYPE_TIMESTAMP_TZ:
         return make_list_from_duckdb_timestamp_vector(env, chunk_size, vector);
 
     case DUCKDB_TYPE_DATE:
