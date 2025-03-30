@@ -792,6 +792,52 @@ MAKE_LIST_FROM_VECTOR(duckdb_string_t, make_binary_from_duckdb_string)
 MAKE_LIST_FROM_VECTOR(duckdb_hugeint, make_hugeint)
 MAKE_LIST_FROM_VECTOR(duckdb_uhugeint, make_uhugeint)
 
+// TODO nested lists
+#define MAKE_LIST_FROM_LIST_VECTOR(ctype, term_maker)                                                                           \
+    static inline ERL_NIF_TERM make_list_from_##ctype##_list_vector(ErlNifEnv *env, idx_t chunk_size, duckdb_vector vector)     \
+    {                                                                                                                           \
+        ERL_NIF_TERM terms[chunk_size];                                                                                         \
+        duckdb_list_entry *entries = (duckdb_list_entry *)duckdb_vector_get_data(vector);                                       \
+        uint64_t *entries_validity = duckdb_vector_get_validity(vector);                                                        \
+        duckdb_vector child = duckdb_list_vector_get_child(vector);                                                             \
+        ctype *data = (ctype *)duckdb_vector_get_data(child);                                                                   \
+        uint64_t *validity = duckdb_vector_get_validity(child);                                                                 \
+        for (idx_t i = 0; i < chunk_size; i++)                                                                                  \
+        {                                                                                                                       \
+            if (duckdb_validity_row_is_valid(entries_validity, i))                                                              \
+            {                                                                                                                   \
+                duckdb_list_entry entry = entries[i];                                                                           \
+                ERL_NIF_TERM subterms[entry.length];                                                                            \
+                for (idx_t j = entry.offset; j < entry.offset + entry.length; j++)                                              \
+                    subterms[j - entry.offset] = duckdb_validity_row_is_valid(validity, j) ? term_maker(env, data[j]) : am_nil; \
+                terms[i] = enif_make_list_from_array(env, subterms, entry.length);                                              \
+            }                                                                                                                   \
+            else                                                                                                                \
+            {                                                                                                                   \
+                terms[i] = am_nil;                                                                                              \
+            }                                                                                                                   \
+        }                                                                                                                       \
+        return enif_make_list_from_array(env, terms, chunk_size);                                                               \
+    }
+
+MAKE_LIST_FROM_LIST_VECTOR(bool, make_bool)
+MAKE_LIST_FROM_LIST_VECTOR(int8_t, enif_make_int)
+MAKE_LIST_FROM_LIST_VECTOR(int16_t, enif_make_int)
+MAKE_LIST_FROM_LIST_VECTOR(int32_t, enif_make_int)
+MAKE_LIST_FROM_LIST_VECTOR(int64_t, enif_make_int64)
+MAKE_LIST_FROM_LIST_VECTOR(uint8_t, enif_make_uint)
+MAKE_LIST_FROM_LIST_VECTOR(uint16_t, enif_make_uint)
+MAKE_LIST_FROM_LIST_VECTOR(uint32_t, enif_make_uint)
+MAKE_LIST_FROM_LIST_VECTOR(uint64_t, enif_make_uint64)
+MAKE_LIST_FROM_LIST_VECTOR(float, enif_make_double)
+MAKE_LIST_FROM_LIST_VECTOR(double, enif_make_double)
+MAKE_LIST_FROM_LIST_VECTOR(duckdb_date, make_date)
+MAKE_LIST_FROM_LIST_VECTOR(duckdb_time, make_time)
+MAKE_LIST_FROM_LIST_VECTOR(duckdb_timestamp, make_naive_datetime)
+MAKE_LIST_FROM_LIST_VECTOR(duckdb_string_t, make_binary_from_duckdb_string)
+MAKE_LIST_FROM_LIST_VECTOR(duckdb_hugeint, make_hugeint)
+MAKE_LIST_FROM_LIST_VECTOR(duckdb_uhugeint, make_uhugeint)
+
 static ERL_NIF_TERM
 duxdb_data_chunk_get_vector(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
@@ -846,6 +892,7 @@ duxdb_data_chunk_get_vector(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 
     case DUCKDB_TYPE_DATE:
         return make_list_from_duckdb_date_vector(env, chunk_size, vector);
+
     case DUCKDB_TYPE_TIME:
         return make_list_from_duckdb_time_vector(env, chunk_size, vector);
     case DUCKDB_TYPE_INTERVAL:
@@ -853,14 +900,14 @@ duxdb_data_chunk_get_vector(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 
     case DUCKDB_TYPE_TINYINT:
         return make_list_from_int8_t_vector(env, chunk_size, vector);
-    case DUCKDB_TYPE_SMALLINT:
-        return make_list_from_int16_t_vector(env, chunk_size, vector);
-
     case DUCKDB_TYPE_UTINYINT:
         return make_list_from_uint8_t_vector(env, chunk_size, vector);
+    case DUCKDB_TYPE_SMALLINT:
+        return make_list_from_int16_t_vector(env, chunk_size, vector);
     case DUCKDB_TYPE_USMALLINT:
         return make_list_from_uint16_t_vector(env, chunk_size, vector);
 
+    // TODO
     case DUCKDB_TYPE_HUGEINT:
     {
         ERL_NIF_TERM i128s = make_list_from_duckdb_hugeint_vector(env, chunk_size, vector);
@@ -870,6 +917,77 @@ duxdb_data_chunk_get_vector(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     {
         ERL_NIF_TERM u128s = make_list_from_duckdb_uhugeint_vector(env, chunk_size, vector);
         return enif_make_tuple2(env, enif_make_int(env, DUCKDB_TYPE_UHUGEINT), u128s);
+    }
+
+    case DUCKDB_TYPE_LIST:
+    {
+        duckdb_logical_type logical_type = duckdb_vector_get_column_type(vector);
+        duckdb_logical_type child_logical_type = duckdb_list_type_child_type(logical_type);
+        duckdb_destroy_logical_type(&logical_type);
+        duckdb_type child_type = duckdb_get_type_id(child_logical_type);
+        duckdb_destroy_logical_type(&child_logical_type);
+
+        switch (child_type)
+        {
+        case DUCKDB_TYPE_BOOLEAN:
+            return make_list_from_bool_list_vector(env, chunk_size, vector);
+
+        case DUCKDB_TYPE_INTEGER:
+            return make_list_from_int32_t_list_vector(env, chunk_size, vector);
+        case DUCKDB_TYPE_UINTEGER:
+            return make_list_from_uint32_t_list_vector(env, chunk_size, vector);
+
+        case DUCKDB_TYPE_VARCHAR:
+        case DUCKDB_TYPE_BLOB:
+            return make_list_from_duckdb_string_t_list_vector(env, chunk_size, vector);
+
+        case DUCKDB_TYPE_BIGINT:
+            return make_list_from_int64_t_list_vector(env, chunk_size, vector);
+        case DUCKDB_TYPE_UBIGINT:
+            return make_list_from_uint64_t_list_vector(env, chunk_size, vector);
+
+        case DUCKDB_TYPE_FLOAT:
+            return make_list_from_float_list_vector(env, chunk_size, vector);
+        case DUCKDB_TYPE_DOUBLE:
+            return make_list_from_double_list_vector(env, chunk_size, vector);
+
+        case DUCKDB_TYPE_TIMESTAMP:
+        case DUCKDB_TYPE_TIMESTAMP_S:
+        case DUCKDB_TYPE_TIMESTAMP_MS:
+        case DUCKDB_TYPE_TIMESTAMP_NS:
+            return make_list_from_duckdb_timestamp_list_vector(env, chunk_size, vector);
+
+        case DUCKDB_TYPE_DATE:
+            return make_list_from_duckdb_date_list_vector(env, chunk_size, vector);
+
+        case DUCKDB_TYPE_TIME:
+            return make_list_from_duckdb_time_list_vector(env, chunk_size, vector);
+
+        case DUCKDB_TYPE_TINYINT:
+            return make_list_from_int8_t_list_vector(env, chunk_size, vector);
+        case DUCKDB_TYPE_UTINYINT:
+            return make_list_from_uint8_t_list_vector(env, chunk_size, vector);
+        case DUCKDB_TYPE_SMALLINT:
+            return make_list_from_int16_t_list_vector(env, chunk_size, vector);
+        case DUCKDB_TYPE_USMALLINT:
+            return make_list_from_uint16_t_list_vector(env, chunk_size, vector);
+
+        // TODO
+        case DUCKDB_TYPE_HUGEINT:
+        {
+            ERL_NIF_TERM i128s = make_list_from_duckdb_hugeint_list_vector(env, chunk_size, vector);
+            return enif_make_tuple2(env, enif_make_int(env, DUCKDB_TYPE_HUGEINT), i128s);
+        }
+        case DUCKDB_TYPE_UHUGEINT:
+        {
+            ERL_NIF_TERM u128s = make_list_from_duckdb_uhugeint_list_vector(env, chunk_size, vector);
+            return enif_make_tuple2(env, enif_make_int(env, DUCKDB_TYPE_UHUGEINT), u128s);
+        }
+
+        default:
+            // TODO
+            return make_badarg(env, enif_make_tuple2(env, enif_make_atom(env, "DUCKDB_TYPE"), enif_make_int(env, type)));
+        }
     }
 
     default:
