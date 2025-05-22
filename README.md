@@ -13,10 +13,10 @@ Here's how it can be used on its own:
 brew install duckdb llvm
 
 duckdb --version
-# v1.2.1 8e52ec4395
+# v1.3.0 71c5c07cdd
 
 clang --version
-# Homebrew clang version 19.1.7
+# Homebrew clang version 20.1.5
 
 export CC=$(which clang)
 export DUXDB_LDFLAGS=-L/opt/homebrew/opt/duckdb/lib

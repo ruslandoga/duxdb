@@ -22,7 +22,7 @@ defmodule DuxDB do
   Returns the version of the linked DuckDB library.
 
       iex> DuxDB.library_version()
-      "v1.2.1"
+      "v1.3.0"
 
   See https://duckdb.org/docs/api/c/api#duckdb_library_version
   """
@@ -33,7 +33,7 @@ defmodule DuxDB do
   Returns the total amount of configuration options available.
 
       iex> DuxDB.config_count()
-      173
+      180
 
   See https://duckdb.org/docs/api/c/api#duckdb_config_count
   """
@@ -51,6 +51,7 @@ defmodule DuxDB do
       ...> end)
       iex> all_config_flags |> Enum.drop(23) |> Enum.take(6)
       [
+        {"custom_user_agent", "Metadata from DuckDB callers"},
         {"debug_asof_iejoin",
          "DEBUG SETTING: force use of IEJoin to implement AsOf joins"},
         {"debug_checkpoint_abort",
@@ -60,12 +61,11 @@ defmodule DuxDB do
         {"debug_force_no_cross_product",
          "DEBUG SETTING: Force disable cross product generation when hyper graph isn't connected, used for testing"},
         {"debug_skip_checkpoint_on_commit",
-         "DEBUG SETTING: skip checkpointing on commit"},
-        {"debug_window_mode", "DEBUG SETTING: switch window mode to use"}
+         "DEBUG SETTING: skip checkpointing on commit"}
       ]
 
       iex> DuxDB.get_config_flag(DuxDB.config_count() + 1)
-      ** (ArgumentError) argument error: 174
+      ** (ArgumentError) argument error: 181
 
   See https://duckdb.org/docs/api/c/api#duckdb_get_config_flag
   """
