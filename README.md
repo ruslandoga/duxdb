@@ -17,14 +17,17 @@ duckdb --version
 
 clang --version
 # Homebrew clang version 20.1.5
-
-export CC=$(which clang)
-export DUXDB_CFLAGS=-I/opt/homebrew/opt/duckdb/include
-export DUXDB_LDFLAGS=-L/opt/homebrew/opt/duckdb/lib
 ```
 
 ```elixir
-Mix.install([{:duxdb, github: "ruslandoga/duxdb"}], force: true)
+Mix.install([{:duxdb, github: "ruslandoga/duxdb"}],
+  force: true,
+  system_env: [
+    CC: System.find_executable("clang"),
+    DUXDB_CFLAGS: "-I/opt/homebrew/opt/duckdb/include",
+    DUXDB_LDFLAGS: "-L/opt/homebrew/opt/duckdb/lib"
+  ]
+)
 
 db = DuxDB.open(":memory:", %{"max_memory" => "1GB"})
 conn = DuxDB.connect(db)
