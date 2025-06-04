@@ -17,6 +17,9 @@ duckdb --version
 
 clang --version
 # Homebrew clang version 20.1.5
+
+brew --prefix duckdb
+# /opt/homebrew/opt/duckdb
 ```
 
 ```elixir
