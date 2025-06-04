@@ -19,6 +19,7 @@ clang --version
 # Homebrew clang version 20.1.5
 
 export CC=$(which clang)
+export DUXDB_CFLAGS=-I/opt/homebrew/opt/duckdb/include
 export DUXDB_LDFLAGS=-L/opt/homebrew/opt/duckdb/lib
 ```
 
@@ -31,10 +32,10 @@ conn = DuxDB.connect(db)
 stmt =
   DuxDB.prepare(conn, """
   SELECT * FROM (VALUES
-    (101, 'Hello, ' || $database || '!', today(), -1.0),
-    (102, 'Insert a lot of rows per batch', today() - 1, 1.41421),
-    (102, 'Sort your data based on your commonly-used queries', today() + 1, 2.718),
-    (101, 'Granules are the smallest chunks of data read', $day, $pi)
+    (112, 'Hello, ' || $database || '!', today(), -1.0),
+    (105, 'Insert a lot of rows per batch', today() - 1, 1.41421),
+    (101, 'Sort your data based on your commonly-used queries', today() + 1, 2.718),
+    (115, 'Granules are the smallest chunks of data read', $day, $pi)
   ) AS my_first_table(user_id, message, timestamp, metric)
   """)
 
@@ -66,7 +67,7 @@ read_chunks.(result)
 #     ],
 #     "metric" => [-1.0, 1.41421, 2.718, 3.14159],
 #     "timestamp" => [~D[2024-10-29], ~D[2024-10-28], ~D[2024-10-30], ~D[2025-03-14]],
-#     "user_id" => [101, 102, 102, 101]
+#     "user_id" => [112, 105, 101, 115]
 #   }
 # ]
 ```

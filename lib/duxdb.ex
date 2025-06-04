@@ -923,7 +923,7 @@ defmodule DuxDB do
   @doc false
   def load_nif do
     :code.priv_dir(:duxdb)
-    |> :filename.join(~c"duxdb_nif")
+    |> :filename.join(~c"duxdb")
     |> :erlang.load_nif(0)
   end
 end
