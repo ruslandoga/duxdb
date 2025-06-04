@@ -10,13 +10,10 @@ Experiments with DuckDB in Elixir.
 Here's how it can be used on its own:
 
 ```sh
-brew install duckdb llvm
+brew install duckdb
 
 duckdb --version
 # v1.3.0 71c5c07cdd
-
-clang --version
-# Homebrew clang version 20.1.5
 
 brew --prefix duckdb
 # /opt/homebrew/opt/duckdb
@@ -26,7 +23,6 @@ brew --prefix duckdb
 Mix.install([{:duxdb, github: "ruslandoga/duxdb"}],
   force: true,
   system_env: [
-    CC: System.find_executable("clang"),
     DUXDB_CFLAGS: "-I/opt/homebrew/opt/duckdb/include",
     DUXDB_LDFLAGS: "-L/opt/homebrew/opt/duckdb/lib"
   ]
