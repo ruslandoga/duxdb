@@ -449,6 +449,7 @@ duxdb_query(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
         const char *error = duckdb_result_error(&result->duck);
         ERL_NIF_TERM errmsg = make_binary(env, error, strlen(error));
 
+        // TODO need it?
         duckdb_destroy_result(&result->duck);
         assert(result->duck.internal_data == NULL);
 
@@ -896,9 +897,10 @@ duxdb_prepare_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     // TODO stmt->duck = NULL;
     if (duckdb_prepare(conn->duck, (const char *)query.data, &stmt->duck) == DuckDBError)
     {
+        const char *errstr = duckdb_prepare_error(stmt->duck);
+        ERL_NIF_TERM error = make_binary(env, errstr, strlen(errstr));
         enif_release_resource(stmt);
-        const char *error = duckdb_prepare_error(stmt->duck);
-        return make_binary(env, error, strlen(error));
+        return error;
     }
 
     ERL_NIF_TERM stmt_resource = enif_make_resource(env, stmt);
@@ -1034,6 +1036,7 @@ duxdb_execute_prepared(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
         const char *error = duckdb_result_error(&result->duck);
         ERL_NIF_TERM errmsg = make_binary(env, error, strlen(error));
 
+        // TODO need it?
         duckdb_destroy_result(&result->duck);
         assert(result->duck.internal_data == NULL);
         enif_release_resource(result);
