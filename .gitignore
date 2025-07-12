@@ -24,10 +24,3 @@ duxdb-*.tar
 
 # Temporary files, for example, from tests.
 /tmp/
-
-# Build artifacts
-obj/
-priv/
-
-# Test files
-simple_test.exs
