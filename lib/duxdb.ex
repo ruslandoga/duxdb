@@ -18,6 +18,11 @@ defmodule DuxDB do
   """
   @type stmt :: reference
 
+  @typedoc """
+  An appender object that enables fast data loading into DuckDB.
+  """
+  @type appender :: reference
+
   @doc """
   Returns the version of the linked DuckDB library.
 
@@ -909,6 +914,220 @@ defmodule DuxDB do
   """
   @spec bind_null(stmt, non_neg_integer) :: :ok
   def bind_null(_stmt, _idx), do: :erlang.nif_error(:undef)
+
+  @doc """
+  Returns the type ID of the specified column.
+
+      iex> conn = DuxDB.connect(DuxDB.open())
+      iex> result = DuxDB.query(conn, "SELECT 42 AS answer")
+      iex> DuxDB.column_type(result, 0)
+      4
+
+  See https://duckdb.org/docs/api/c/api#duckdb_column_type
+  """
+  @spec column_type(result, non_neg_integer) :: integer
+  def column_type(_result, _idx), do: :erlang.nif_error(:undef)
+
+  @doc """
+  Retrieves the current number of tuples in a data chunk.
+
+      iex> conn = DuxDB.connect(DuxDB.open())
+      iex> chunk = DuxDB.fetch_chunk(DuxDB.query(conn, "SELECT 42 AS answer"))
+      iex> DuxDB.data_chunk_get_size(chunk)
+      1
+
+  See https://duckdb.org/docs/api/c/api#duckdb_data_chunk_get_size
+  """
+  @spec data_chunk_get_size(data_chunk) :: non_neg_integer
+  def data_chunk_get_size(_data_chunk), do: :erlang.nif_error(:undef)
+
+  @doc """
+  Returns the internal vector size used by DuckDB.
+  This is the amount of tuples that will fit into a data chunk created by DuckDB.
+
+      iex> DuxDB.vector_size()
+      2048
+
+  See https://duckdb.org/docs/api/c/api#duckdb_vector_size
+  """
+  @spec vector_size :: pos_integer
+  def vector_size, do: :erlang.nif_error(:undef)
+
+  @doc """
+  Returns the total number of rows in a result set.
+
+      iex> conn = DuxDB.connect(DuxDB.open())
+      iex> result = DuxDB.query(conn, "SELECT * FROM (VALUES (1), (2), (3)) AS t(x)")
+      iex> DuxDB.row_count(result)
+      3
+
+  See https://duckdb.org/docs/api/c/api#duckdb_row_count
+  """
+  @spec row_count(result) :: non_neg_integer
+  def row_count(_result), do: :erlang.nif_error(:undef)
+
+  @doc """
+  Creates an appender object for fast bulk data loading into a table.
+
+      iex> conn = DuxDB.connect(DuxDB.open())
+      iex> DuxDB.query(conn, "CREATE TABLE test_table (id INTEGER, name VARCHAR)")
+      iex> appender = DuxDB.appender_create(conn, nil, "test_table")
+      iex> is_reference(appender)
+      true
+
+  The appender is destroyed with `appender_destroy/1` or on garbage collection.
+
+  See https://duckdb.org/docs/api/c/api#duckdb_appender_create
+  """
+  @spec appender_create(conn, String.t() | nil, String.t()) :: appender
+  def appender_create(conn, schema, table) do
+    case appender_create_nif(conn, schema, c_str(table)) do
+      appender when is_reference(appender) -> appender
+      error when is_binary(error) -> raise ArgumentError, message: error
+    end
+  end
+
+  defp appender_create_nif(_conn, _schema, _table), do: :erlang.nif_error(:undef)
+
+  @doc """
+  Destroys the appender and frees associated memory.
+
+      iex> conn = DuxDB.connect(DuxDB.open())
+      iex> DuxDB.query(conn, "CREATE TABLE test_table (id INTEGER)")
+      iex> appender = DuxDB.appender_create(conn, nil, "test_table")
+      iex> DuxDB.appender_destroy(appender)
+      :ok
+
+  See https://duckdb.org/docs/api/c/api#duckdb_appender_destroy
+  """
+  @spec appender_destroy(appender) :: :ok
+  def appender_destroy(_appender), do: :erlang.nif_error(:undef)
+
+  @doc """
+  Begins a new row for the appender.
+
+      iex> conn = DuxDB.connect(DuxDB.open())
+      iex> DuxDB.query(conn, "CREATE TABLE test_table (id INTEGER)")
+      iex> appender = DuxDB.appender_create(conn, nil, "test_table")
+      iex> DuxDB.appender_begin_row(appender)
+      :ok
+
+  See https://duckdb.org/docs/api/c/api#duckdb_appender_begin_row
+  """
+  @spec appender_begin_row(appender) :: :ok
+  def appender_begin_row(_appender), do: :erlang.nif_error(:undef)
+
+  @doc """
+  Ends the current row for the appender.
+
+      iex> conn = DuxDB.connect(DuxDB.open())
+      iex> DuxDB.query(conn, "CREATE TABLE test_table (id INTEGER)")
+      iex> appender = DuxDB.appender_create(conn, nil, "test_table")
+      iex> DuxDB.appender_begin_row(appender)
+      iex> DuxDB.append_int32(appender, 42)
+      iex> DuxDB.appender_end_row(appender)
+      :ok
+
+  See https://duckdb.org/docs/api/c/api#duckdb_appender_end_row
+  """
+  @spec appender_end_row(appender) :: :ok
+  def appender_end_row(_appender), do: :erlang.nif_error(:undef)
+
+  @doc """
+  Closes the appender and flushes data to the table.
+
+      iex> conn = DuxDB.connect(DuxDB.open())
+      iex> DuxDB.query(conn, "CREATE TABLE test_table (id INTEGER)")
+      iex> appender = DuxDB.appender_create(conn, nil, "test_table")
+      iex> DuxDB.appender_close(appender)
+      :ok
+
+  See https://duckdb.org/docs/api/c/api#duckdb_appender_close
+  """
+  @spec appender_close(appender) :: :ok
+  def appender_close(appender) do
+    case appender_close_nif(appender) do
+      :ok -> :ok
+      error when is_binary(error) -> raise ArgumentError, message: error
+    end
+  end
+
+  defp appender_close_nif(_appender), do: :erlang.nif_error(:undef)
+
+  @doc """
+  Appends a 32-bit integer value to the current row.
+
+      iex> conn = DuxDB.connect(DuxDB.open())
+      iex> DuxDB.query(conn, "CREATE TABLE test_table (id INTEGER)")
+      iex> appender = DuxDB.appender_create(conn, nil, "test_table")
+      iex> DuxDB.appender_begin_row(appender)
+      iex> DuxDB.append_int32(appender, 42)
+      :ok
+
+  See https://duckdb.org/docs/api/c/api#duckdb_append_int32
+  """
+  @spec append_int32(appender, integer) :: :ok
+  def append_int32(_appender, _value), do: :erlang.nif_error(:undef)
+
+  @doc """
+  Appends a 64-bit integer value to the current row.
+
+      iex> conn = DuxDB.connect(DuxDB.open())
+      iex> DuxDB.query(conn, "CREATE TABLE test_table (id BIGINT)")
+      iex> appender = DuxDB.appender_create(conn, nil, "test_table")
+      iex> DuxDB.appender_begin_row(appender)
+      iex> DuxDB.append_int64(appender, 9223372036854775807)
+      :ok
+
+  See https://duckdb.org/docs/api/c/api#duckdb_append_int64
+  """
+  @spec append_int64(appender, integer) :: :ok
+  def append_int64(_appender, _value), do: :erlang.nif_error(:undef)
+
+  @doc """
+  Appends a double precision floating point value to the current row.
+
+      iex> conn = DuxDB.connect(DuxDB.open())
+      iex> DuxDB.query(conn, "CREATE TABLE test_table (value DOUBLE)")
+      iex> appender = DuxDB.appender_create(conn, nil, "test_table")
+      iex> DuxDB.appender_begin_row(appender)
+      iex> DuxDB.append_double(appender, 3.14)
+      :ok
+
+  See https://duckdb.org/docs/api/c/api#duckdb_append_double
+  """
+  @spec append_double(appender, float) :: :ok
+  def append_double(_appender, _value), do: :erlang.nif_error(:undef)
+
+  @doc """
+  Appends a string value to the current row.
+
+      iex> conn = DuxDB.connect(DuxDB.open())
+      iex> DuxDB.query(conn, "CREATE TABLE test_table (name VARCHAR)")
+      iex> appender = DuxDB.appender_create(conn, nil, "test_table")
+      iex> DuxDB.appender_begin_row(appender)
+      iex> DuxDB.append_varchar(appender, "hello")
+      :ok
+
+  See https://duckdb.org/docs/api/c/api#duckdb_append_varchar_length
+  """
+  @spec append_varchar(appender, String.t()) :: :ok
+  def append_varchar(_appender, _value), do: :erlang.nif_error(:undef)
+
+  @doc """
+  Appends a NULL value to the current row.
+
+      iex> conn = DuxDB.connect(DuxDB.open())
+      iex> DuxDB.query(conn, "CREATE TABLE test_table (value INTEGER)")
+      iex> appender = DuxDB.appender_create(conn, nil, "test_table")
+      iex> DuxDB.appender_begin_row(appender)
+      iex> DuxDB.append_null(appender)
+      :ok
+
+  See https://duckdb.org/docs/api/c/api#duckdb_append_null
+  """
+  @spec append_null(appender) :: :ok
+  def append_null(_appender), do: :erlang.nif_error(:undef)
 
   @compile inline: [c_str: 1]
   defp c_str(b) when is_binary(b), do: [b, 0]

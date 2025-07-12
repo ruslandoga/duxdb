@@ -33,6 +33,7 @@ static ErlNifResourceType *conn_t;
 static ErlNifResourceType *result_t;
 static ErlNifResourceType *data_chunk_t;
 static ErlNifResourceType *stmt_t;
+static ErlNifResourceType *appender_t;
 
 typedef struct
 {
@@ -63,6 +64,11 @@ typedef struct
 {
     duckdb_prepared_statement duck;
 } duxdb_stmt;
+
+typedef struct
+{
+    duckdb_appender duck;
+} duxdb_appender;
 
 static void
 config_destructor(ErlNifEnv *env, void *arg)
@@ -130,6 +136,17 @@ stmt_destructor(ErlNifEnv *env, void *arg)
     }
 }
 
+static void
+appender_destructor(ErlNifEnv *env, void *arg)
+{
+    duckdb_appender appender = ((duxdb_appender *)arg)->duck;
+    if (appender)
+    {
+        duckdb_appender_destroy(&appender);
+        assert(appender == NULL);
+    }
+}
+
 static int
 on_load(ErlNifEnv *env, void **priv, ERL_NIF_TERM info)
 {
@@ -178,6 +195,10 @@ on_load(ErlNifEnv *env, void **priv, ERL_NIF_TERM info)
 
     stmt_t = enif_open_resource_type(env, "duxdb", "stmt", stmt_destructor, ERL_NIF_RT_CREATE, NULL);
     if (!stmt_t)
+        return -1;
+
+    appender_t = enif_open_resource_type(env, "duxdb", "appender", appender_destructor, ERL_NIF_RT_CREATE, NULL);
+    if (!appender_t)
         return -1;
 
     return 0;
@@ -1313,6 +1334,228 @@ duxdb_bind_null(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     return am_ok;
 }
 
+static ERL_NIF_TERM
+duxdb_column_type(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    duxdb_result *result;
+    if (!enif_get_resource(env, argv[0], result_t, (void **)&result) || !(result->duck.internal_data))
+        return make_badarg(env, argv[0]);
+
+    ErlNifUInt64 idx;
+    if (!enif_get_uint64(env, argv[1], &idx))
+        return make_badarg(env, argv[1]);
+
+    duckdb_type type = duckdb_column_type(&result->duck, idx);
+    return enif_make_int(env, type);
+}
+
+static ERL_NIF_TERM
+duxdb_data_chunk_get_size(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    duxdb_data_chunk *chunk;
+    if (!enif_get_resource(env, argv[0], data_chunk_t, (void **)&chunk) || !(chunk->duck))
+        return make_badarg(env, argv[0]);
+
+    idx_t size = duckdb_data_chunk_get_size(chunk->duck);
+    return enif_make_uint64(env, size);
+}
+
+static ERL_NIF_TERM
+duxdb_vector_size(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    idx_t vector_size = duckdb_vector_size();
+    return enif_make_uint64(env, vector_size);
+}
+
+static ERL_NIF_TERM
+duxdb_row_count(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    duxdb_result *result;
+    if (!enif_get_resource(env, argv[0], result_t, (void **)&result) || !(result->duck.internal_data))
+        return make_badarg(env, argv[0]);
+
+    idx_t count = duckdb_row_count(&result->duck);
+    return enif_make_uint64(env, count);
+}
+
+static ERL_NIF_TERM
+duxdb_appender_create(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    duxdb_conn *conn;
+    if (!enif_get_resource(env, argv[0], conn_t, (void **)&conn) || !(conn->duck))
+        return make_badarg(env, argv[0]);
+
+    const char *schema = NULL;
+    ErlNifBinary schema_bin;
+    if (!enif_is_identical(argv[1], am_nil))
+    {
+        if (!enif_inspect_iolist_as_binary(env, argv[1], &schema_bin))
+            return make_badarg(env, argv[1]);
+        schema = (const char *)schema_bin.data;
+    }
+
+    ErlNifBinary table_bin;
+    if (!enif_inspect_iolist_as_binary(env, argv[2], &table_bin))
+        return make_badarg(env, argv[2]);
+
+    duxdb_appender *appender = enif_alloc_resource(appender_t, sizeof(duxdb_appender));
+    if (!appender)
+        return enif_raise_exception(env, am_system_limit);
+
+    appender->duck = NULL;
+
+    if (duckdb_appender_create(conn->duck, schema, (const char *)table_bin.data, &appender->duck) == DuckDBError)
+    {
+        const char *error = duckdb_appender_error(appender->duck);
+        ERL_NIF_TERM error_term = make_binary(env, error, strlen(error));
+        enif_release_resource(appender);
+        return error_term;
+    }
+
+    ERL_NIF_TERM appender_resource = enif_make_resource(env, appender);
+    enif_release_resource(appender);
+    return appender_resource;
+}
+
+static ERL_NIF_TERM
+duxdb_appender_destroy(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    duxdb_appender *appender;
+    if (!enif_get_resource(env, argv[0], appender_t, (void **)&appender))
+        return make_badarg(env, argv[0]);
+
+    if (appender->duck)
+    {
+        duckdb_appender_destroy(&appender->duck);
+        assert(appender->duck == NULL);
+    }
+
+    return am_ok;
+}
+
+static ERL_NIF_TERM
+duxdb_appender_begin_row(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    duxdb_appender *appender;
+    if (!enif_get_resource(env, argv[0], appender_t, (void **)&appender) || !(appender->duck))
+        return make_badarg(env, argv[0]);
+
+    if (duckdb_appender_begin_row(appender->duck) == DuckDBError)
+        return am_error;
+
+    return am_ok;
+}
+
+static ERL_NIF_TERM
+duxdb_appender_end_row(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    duxdb_appender *appender;
+    if (!enif_get_resource(env, argv[0], appender_t, (void **)&appender) || !(appender->duck))
+        return make_badarg(env, argv[0]);
+
+    if (duckdb_appender_end_row(appender->duck) == DuckDBError)
+        return am_error;
+
+    return am_ok;
+}
+
+static ERL_NIF_TERM
+duxdb_appender_close(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    duxdb_appender *appender;
+    if (!enif_get_resource(env, argv[0], appender_t, (void **)&appender) || !(appender->duck))
+        return make_badarg(env, argv[0]);
+
+    if (duckdb_appender_close(appender->duck) == DuckDBError)
+    {
+        const char *error = duckdb_appender_error(appender->duck);
+        return make_binary(env, error, strlen(error));
+    }
+
+    return am_ok;
+}
+
+static ERL_NIF_TERM
+duxdb_append_int32(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    duxdb_appender *appender;
+    if (!enif_get_resource(env, argv[0], appender_t, (void **)&appender) || !(appender->duck))
+        return make_badarg(env, argv[0]);
+
+    int value;
+    if (!enif_get_int(env, argv[1], &value))
+        return make_badarg(env, argv[1]);
+
+    if (duckdb_append_int32(appender->duck, value) == DuckDBError)
+        return am_error;
+
+    return am_ok;
+}
+
+static ERL_NIF_TERM
+duxdb_append_int64(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    duxdb_appender *appender;
+    if (!enif_get_resource(env, argv[0], appender_t, (void **)&appender) || !(appender->duck))
+        return make_badarg(env, argv[0]);
+
+    ErlNifSInt64 value;
+    if (!enif_get_int64(env, argv[1], &value))
+        return make_badarg(env, argv[1]);
+
+    if (duckdb_append_int64(appender->duck, value) == DuckDBError)
+        return am_error;
+
+    return am_ok;
+}
+
+static ERL_NIF_TERM
+duxdb_append_double(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    duxdb_appender *appender;
+    if (!enif_get_resource(env, argv[0], appender_t, (void **)&appender) || !(appender->duck))
+        return make_badarg(env, argv[0]);
+
+    double value;
+    if (!enif_get_double(env, argv[1], &value))
+        return make_badarg(env, argv[1]);
+
+    if (duckdb_append_double(appender->duck, value) == DuckDBError)
+        return am_error;
+
+    return am_ok;
+}
+
+static ERL_NIF_TERM
+duxdb_append_varchar(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    duxdb_appender *appender;
+    if (!enif_get_resource(env, argv[0], appender_t, (void **)&appender) || !(appender->duck))
+        return make_badarg(env, argv[0]);
+
+    ErlNifBinary value;
+    if (!enif_inspect_binary(env, argv[1], &value))
+        return make_badarg(env, argv[1]);
+
+    if (duckdb_append_varchar_length(appender->duck, (const char *)value.data, value.size) == DuckDBError)
+        return am_error;
+
+    return am_ok;
+}
+
+static ERL_NIF_TERM
+duxdb_append_null(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    duxdb_appender *appender;
+    if (!enif_get_resource(env, argv[0], appender_t, (void **)&appender) || !(appender->duck))
+        return make_badarg(env, argv[0]);
+
+    if (duckdb_append_null(appender->duck) == DuckDBError)
+        return am_error;
+
+    return am_ok;
+}
+
 static ErlNifFunc nif_funcs[] = {
     {"library_version", 0, duxdb_library_version, 0},
 
@@ -1381,6 +1624,24 @@ static ErlNifFunc nif_funcs[] = {
     {"bind_hugeint_nif", 4, duxdb_bind_hugeint, 0},
     {"bind_uhugeint_nif", 4, duxdb_bind_uhugeint, 0},
     {"bind_null", 2, duxdb_bind_null, 0},
+
+    // Additional utility functions
+    {"column_type", 2, duxdb_column_type, 0},
+    {"data_chunk_get_size", 1, duxdb_data_chunk_get_size, 0},
+    {"vector_size", 0, duxdb_vector_size, 0},
+    {"row_count", 1, duxdb_row_count, 0},
+
+    // Appender functions
+    {"appender_create_nif", 3, duxdb_appender_create, 0},
+    {"appender_destroy", 1, duxdb_appender_destroy, 0},
+    {"appender_begin_row", 1, duxdb_appender_begin_row, 0},
+    {"appender_end_row", 1, duxdb_appender_end_row, 0},
+    {"appender_close_nif", 1, duxdb_appender_close, 0},
+    {"append_int32", 2, duxdb_append_int32, 0},
+    {"append_int64", 2, duxdb_append_int64, 0},
+    {"append_double", 2, duxdb_append_double, 0},
+    {"append_varchar", 2, duxdb_append_varchar, 0},
+    {"append_null", 1, duxdb_append_null, 0},
 };
 
 ERL_NIF_INIT(Elixir.DuxDB, nif_funcs, on_load, NULL, NULL, NULL)

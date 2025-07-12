@@ -77,6 +77,90 @@ defmodule DuxDBTest do
            ]
   end
 
+  test "new API functions" do
+    conn = DuxDB.connect(DuxDB.open())
+    
+    # Test vector_size
+    vector_size = DuxDB.vector_size()
+    assert is_integer(vector_size) and vector_size > 0
+    
+    # Test with a simple query
+    result = DuxDB.query(conn, "SELECT 42::INTEGER AS answer, 'hello'::VARCHAR AS greeting")
+    
+    # Test column_type
+    type0 = DuxDB.column_type(result, 0)
+    type1 = DuxDB.column_type(result, 1)
+    assert type0 == 4  # DUCKDB_TYPE_INTEGER
+    assert type1 == 13  # DUCKDB_TYPE_VARCHAR
+    
+    # Test row_count
+    rows = DuxDB.row_count(result)
+    assert rows == 1
+    
+    # Test data chunk functions
+    chunk = DuxDB.fetch_chunk(result)
+    assert chunk != nil
+    chunk_size = DuxDB.data_chunk_get_size(chunk)
+    assert chunk_size == 1
+    
+    # Test with multiple rows
+    result2 = DuxDB.query(conn, "SELECT * FROM (VALUES (1, 'a'), (2, 'b'), (3, 'c')) AS t(id, name)")
+    rows2 = DuxDB.row_count(result2)
+    assert rows2 == 3
+    
+    chunk2 = DuxDB.fetch_chunk(result2)
+    assert chunk2 != nil
+    chunk2_size = DuxDB.data_chunk_get_size(chunk2)
+    assert chunk2_size == 3
+  end
+
+  test "appender API functions" do
+    conn = DuxDB.connect(DuxDB.open())
+    
+    # Create a test table
+    DuxDB.query(conn, "CREATE TABLE test_appender (id INTEGER, name VARCHAR, score DOUBLE)")
+    
+    # Create an appender
+    appender = DuxDB.appender_create(conn, nil, "test_appender")
+    assert is_reference(appender)
+    
+    # Insert some data using the appender
+    for i <- 1..3 do
+      DuxDB.appender_begin_row(appender)
+      DuxDB.append_int32(appender, i)
+      DuxDB.append_varchar(appender, "name#{i}")
+      DuxDB.append_double(appender, i * 1.5)
+      DuxDB.appender_end_row(appender)
+    end
+    
+    # Insert a row with NULL
+    DuxDB.appender_begin_row(appender)
+    DuxDB.append_int32(appender, 4)
+    DuxDB.append_null(appender)  # NULL name
+    DuxDB.append_double(appender, 4.5)
+    DuxDB.appender_end_row(appender)
+    
+    # Close and destroy the appender
+    DuxDB.appender_close(appender)
+    DuxDB.appender_destroy(appender)
+    
+    # Verify the data was inserted correctly
+    result = DuxDB.query(conn, "SELECT * FROM test_appender ORDER BY id")
+    rows = DuxDB.row_count(result)
+    assert rows == 4
+    
+    # Test the data content
+    chunk = DuxDB.fetch_chunk(result)
+    
+    ids = DuxDB.data_chunk_get_vector(chunk, 0)
+    names = DuxDB.data_chunk_get_vector(chunk, 1)
+    scores = DuxDB.data_chunk_get_vector(chunk, 2)
+    
+    assert ids == [1, 2, 3, 4]
+    assert names == ["name1", "name2", "name3", nil]
+    assert scores == [1.5, 3.0, 4.5, 4.5]
+  end
+
   describe "DUCKDB_TYPE" do
     setup do
       conn = DuxDB.connect(DuxDB.open())
