@@ -34,6 +34,7 @@ static ErlNifResourceType *result_t;
 static ErlNifResourceType *data_chunk_t;
 static ErlNifResourceType *stmt_t;
 static ErlNifResourceType *appender_t;
+static ErlNifResourceType *logical_type_t;
 
 typedef struct
 {
@@ -69,6 +70,11 @@ typedef struct
 {
     duckdb_appender duck;
 } duxdb_appender;
+
+typedef struct
+{
+    duckdb_logical_type duck;
+} duxdb_logical_type;
 
 static void
 config_destructor(ErlNifEnv *env, void *arg)
@@ -147,6 +153,17 @@ appender_destructor(ErlNifEnv *env, void *arg)
     }
 }
 
+static void
+logical_type_destructor(ErlNifEnv *env, void *arg)
+{
+    duckdb_logical_type logical_type = ((duxdb_logical_type *)arg)->duck;
+    if (logical_type)
+    {
+        duckdb_destroy_logical_type(&logical_type);
+        assert(logical_type == NULL);
+    }
+}
+
 static int
 on_load(ErlNifEnv *env, void **priv, ERL_NIF_TERM info)
 {
@@ -199,6 +216,10 @@ on_load(ErlNifEnv *env, void **priv, ERL_NIF_TERM info)
 
     appender_t = enif_open_resource_type(env, "duxdb", "appender", appender_destructor, ERL_NIF_RT_CREATE, NULL);
     if (!appender_t)
+        return -1;
+
+    logical_type_t = enif_open_resource_type(env, "duxdb", "logical_type", logical_type_destructor, ERL_NIF_RT_CREATE, NULL);
+    if (!logical_type_t)
         return -1;
 
     return 0;
@@ -1556,6 +1577,60 @@ duxdb_append_null(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     return am_ok;
 }
 
+static ERL_NIF_TERM
+duxdb_column_logical_type(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    duxdb_result *result;
+    if (!enif_get_resource(env, argv[0], result_t, (void **)&result) || !(result->duck.internal_data))
+        return make_badarg(env, argv[0]);
+
+    ErlNifUInt64 idx;
+    if (!enif_get_uint64(env, argv[1], &idx))
+        return make_badarg(env, argv[1]);
+
+    duxdb_logical_type *logical_type = enif_alloc_resource(logical_type_t, sizeof(duxdb_logical_type));
+    if (!logical_type)
+        return enif_raise_exception(env, am_system_limit);
+
+    logical_type->duck = duckdb_column_logical_type(&result->duck, idx);
+    if (!logical_type->duck)
+    {
+        enif_release_resource(logical_type);
+        return make_badarg(env, argv[1]);
+    }
+
+    ERL_NIF_TERM logical_type_resource = enif_make_resource(env, logical_type);
+    enif_release_resource(logical_type);
+    return logical_type_resource;
+}
+
+static ERL_NIF_TERM
+duxdb_get_type_id(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    duxdb_logical_type *logical_type;
+    if (!enif_get_resource(env, argv[0], logical_type_t, (void **)&logical_type) || !(logical_type->duck))
+        return make_badarg(env, argv[0]);
+
+    duckdb_type type_id = duckdb_get_type_id(logical_type->duck);
+    return enif_make_int(env, type_id);
+}
+
+static ERL_NIF_TERM
+duxdb_destroy_logical_type(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    duxdb_logical_type *logical_type;
+    if (!enif_get_resource(env, argv[0], logical_type_t, (void **)&logical_type))
+        return make_badarg(env, argv[0]);
+
+    if (logical_type->duck)
+    {
+        duckdb_destroy_logical_type(&logical_type->duck);
+        assert(logical_type->duck == NULL);
+    }
+
+    return am_ok;
+}
+
 static ErlNifFunc nif_funcs[] = {
     {"library_version", 0, duxdb_library_version, 0},
 
@@ -1642,6 +1717,11 @@ static ErlNifFunc nif_funcs[] = {
     {"append_double", 2, duxdb_append_double, 0},
     {"append_varchar", 2, duxdb_append_varchar, 0},
     {"append_null", 1, duxdb_append_null, 0},
+
+    // Logical type functions
+    {"column_logical_type", 2, duxdb_column_logical_type, 0},
+    {"get_type_id", 1, duxdb_get_type_id, 0},
+    {"destroy_logical_type", 1, duxdb_destroy_logical_type, 0},
 };
 
 ERL_NIF_INIT(Elixir.DuxDB, nif_funcs, on_load, NULL, NULL, NULL)

@@ -161,6 +161,41 @@ defmodule DuxDBTest do
     assert scores == [1.5, 3.0, 4.5, 4.5]
   end
 
+  test "logical type functions" do
+    conn = DuxDB.connect(DuxDB.open())
+    
+    # Test with different column types
+    result = DuxDB.query(conn, "SELECT 42::INTEGER AS int_col, 'hello'::VARCHAR AS str_col, 3.14::DOUBLE AS float_col")
+    
+    # Test logical type extraction
+    logical_type0 = DuxDB.column_logical_type(result, 0)
+    logical_type1 = DuxDB.column_logical_type(result, 1)
+    logical_type2 = DuxDB.column_logical_type(result, 2)
+    
+    assert is_reference(logical_type0)
+    assert is_reference(logical_type1)
+    assert is_reference(logical_type2)
+    
+    # Test type ID extraction
+    type_id0 = DuxDB.get_type_id(logical_type0)
+    type_id1 = DuxDB.get_type_id(logical_type1)
+    type_id2 = DuxDB.get_type_id(logical_type2)
+    
+    assert type_id0 == 4   # DUCKDB_TYPE_INTEGER
+    assert type_id1 == 13  # DUCKDB_TYPE_VARCHAR
+    assert type_id2 == 9   # DUCKDB_TYPE_DOUBLE
+    
+    # These should match the simple column_type function
+    assert DuxDB.column_type(result, 0) == type_id0
+    assert DuxDB.column_type(result, 1) == type_id1
+    assert DuxDB.column_type(result, 2) == type_id2
+    
+    # Clean up
+    DuxDB.destroy_logical_type(logical_type0)
+    DuxDB.destroy_logical_type(logical_type1)
+    DuxDB.destroy_logical_type(logical_type2)
+  end
+
   describe "DUCKDB_TYPE" do
     setup do
       conn = DuxDB.connect(DuxDB.open())

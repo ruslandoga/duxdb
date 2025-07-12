@@ -23,6 +23,11 @@ defmodule DuxDB do
   """
   @type appender :: reference
 
+  @typedoc """
+  A logical type object that provides detailed type information.
+  """
+  @type logical_type :: reference
+
   @doc """
   Returns the version of the linked DuckDB library.
 
@@ -1128,6 +1133,51 @@ defmodule DuxDB do
   """
   @spec append_null(appender) :: :ok
   def append_null(_appender), do: :erlang.nif_error(:undef)
+
+  @doc """
+  Returns the logical type of the specified column in a result.
+  This provides more detailed type information than `column_type/2`.
+
+      iex> conn = DuxDB.connect(DuxDB.open())
+      iex> result = DuxDB.query(conn, "SELECT 42::INTEGER AS answer")
+      iex> logical_type = DuxDB.column_logical_type(result, 0)
+      iex> is_reference(logical_type)
+      true
+
+  The logical type is destroyed with `destroy_logical_type/1` or on garbage collection.
+
+  See https://duckdb.org/docs/api/c/api#duckdb_column_logical_type
+  """
+  @spec column_logical_type(result, non_neg_integer) :: logical_type
+  def column_logical_type(_result, _idx), do: :erlang.nif_error(:undef)
+
+  @doc """
+  Returns the type ID of a logical type.
+
+      iex> conn = DuxDB.connect(DuxDB.open())
+      iex> result = DuxDB.query(conn, "SELECT 42::INTEGER AS answer")
+      iex> logical_type = DuxDB.column_logical_type(result, 0)
+      iex> DuxDB.get_type_id(logical_type)
+      4
+
+  See https://duckdb.org/docs/api/c/api#duckdb_get_type_id
+  """
+  @spec get_type_id(logical_type) :: integer
+  def get_type_id(_logical_type), do: :erlang.nif_error(:undef)
+
+  @doc """
+  Destroys the logical type and frees associated memory.
+
+      iex> conn = DuxDB.connect(DuxDB.open())
+      iex> result = DuxDB.query(conn, "SELECT 42::INTEGER AS answer")
+      iex> logical_type = DuxDB.column_logical_type(result, 0)
+      iex> DuxDB.destroy_logical_type(logical_type)
+      :ok
+
+  See https://duckdb.org/docs/api/c/api#duckdb_destroy_logical_type
+  """
+  @spec destroy_logical_type(logical_type) :: :ok
+  def destroy_logical_type(_logical_type), do: :erlang.nif_error(:undef)
 
   @compile inline: [c_str: 1]
   defp c_str(b) when is_binary(b), do: [b, 0]
