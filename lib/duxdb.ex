@@ -449,6 +449,12 @@ defmodule DuxDB do
 
   defp data_chunk_get_vector_nif(_data_chunk, _idx), do: :erlang.nif_error(:undef)
 
+  def extracted_statements(conn, sql) do
+    extract_statements_nif(conn, c_str(sql))
+  end
+
+  defp extract_statements_nif(_conn, _sql), do: :erlang.nif_error(:undef)
+
   @doc ~S"""
   Creates a prepared statement object from a query.
 
