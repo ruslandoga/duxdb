@@ -24,3 +24,7 @@ duxdb-*.tar
 
 # Temporary files, for example, from tests.
 /tmp/
+
+# DuckDB library files
+libduckdb/
+libduckdb.zip
