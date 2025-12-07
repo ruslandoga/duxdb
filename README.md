@@ -13,7 +13,7 @@ Here's how it can be used on its own:
 brew install duckdb
 
 duckdb --version
-# v1.3.0 71c5c07cdd
+# v1.4.2 (Andium) 68d7555f68
 
 brew --prefix duckdb
 # /opt/homebrew/opt/duckdb
@@ -68,8 +68,8 @@ read_chunks.(result)
 #       "Granules are the smallest chunks of data read"
 #     ],
 #     "metric" => [-1.0, 1.41421, 2.718, 3.14159],
-#     "timestamp" => [~D[2024-10-29], ~D[2024-10-28], ~D[2024-10-30], ~D[2025-03-14]],
-#     "user_id" => [112, 105, 101, 115]
+#     "timestamp" => [~D[2025-12-07], ~D[2025-12-06], ~D[2025-12-08], ~D[2025-03-14]],
+#     "user_id" => ~c"pies"
 #   }
 # ]
 ```
