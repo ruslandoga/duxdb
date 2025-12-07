@@ -8,7 +8,12 @@ defmodule DuxDB.MixProject do
       elixir: "~> 1.17",
       compilers: [:elixir_make | Mix.compilers()],
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      # dialyzer
+      dialyzer: [
+        plt_local_path: "plts",
+        plt_core_path: "plts"
+      ]
     ]
   end
 
@@ -20,7 +25,8 @@ defmodule DuxDB.MixProject do
     [
       {:elixir_make, "~> 0.8", runtime: false},
       {:stream_data, "~> 1.1", only: :test},
-      {:ex_doc, "~> 0.34", only: :docs}
+      {:ex_doc, "~> 0.34", only: :docs},
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false}
     ]
   end
 end
