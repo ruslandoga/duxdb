@@ -24,7 +24,11 @@ defmodule DuxDB.MixProject do
           },
           {:unix, :linux} => %{
             "aarch64-linux-gnu" => {"aarch64-linux-gnu-gcc", "aarch64-linux-gnu-g++"},
-            "x86_64-linux-gnu" => {"x86_64-linux-gnu-gcc", "x86_64-linux-gnu-g++"}
+            "aarch64-linux-musl" =>
+              {"aarch64-alpine-linux-musl-gcc", "aarch64-alpine-linux-musl-g++"},
+            "x86_64-linux-gnu" => {"x86_64-linux-gnu-gcc", "x86_64-linux-gnu-g++"},
+            "x86_64-linux-musl" =>
+              {"x86_64-alpine-linux-musl-gcc", "x86_64-alpine-linux-musl-g++"}
           }
         }
       ],

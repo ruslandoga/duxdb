@@ -64,3 +64,56 @@ jobs:
           files: |
             cache/duxdb*.tar.gz
             cache/duxdb*.sha256
+
+  precompile-musl:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - target: aarch64-linux-musl
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
+            duckdb_asset: libduckdb-linux-arm64-musl.zip
+          - target: x86_64-linux-musl
+            platform: linux/amd64
+            runner: ubuntu-24.04
+            duckdb_asset: libduckdb-linux-amd64-musl.zip
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build artifact
+        run: |
+          mkdir -p cache
+          docker run --rm \
+            --platform "${{ matrix.platform }}" \
+            --volume "${{ github.workspace }}:/work" \
+            --workdir /work \
+            --env MIX_ENV=prod \
+            --env CC_PRECOMPILER_PRECOMPILE_ONLY_LOCAL=true \
+            --env DUCKDB_VERSION="${DUCKDB_VERSION}" \
+            hexpm/elixir:1.20.2-erlang-29.0.3-alpine-3.24.1 \
+            sh -lc '
+              set -eu
+              apk add --no-cache build-base curl unzip ca-certificates
+              curl -fsSL \
+                "https://github.com/duckdb/duckdb/releases/download/v${DUCKDB_VERSION}/${{ matrix.duckdb_asset }}" \
+                -o /tmp/libduckdb.zip
+              unzip -q /tmp/libduckdb.zip -d /tmp/libduckdb
+              mix local.hex --force
+              mix deps.get
+              export DUXDB_CFLAGS=-I/tmp/libduckdb
+              export DUXDB_LDFLAGS=-L/tmp/libduckdb
+              export DUXDB_LIB_DIR=/tmp/libduckdb
+              export ELIXIR_MAKE_CACHE_DIR=/work/cache
+              mix elixir_make.precompile
+            '
+
+      - name: Upload release artifacts
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            cache/duxdb*.tar.gz
+            cache/duxdb*.sha256
