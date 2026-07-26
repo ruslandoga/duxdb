@@ -11,7 +11,7 @@
 # Parquet. It is a particularly good explanation of how projection, filtering,
 # aggregation, and parallel file scans fit together:
 # https://clickhouse.com/blog/clickhouse-and-parquet-a-foundation-for-fast-lakehouse-analytics
-defmodule DuxDB.ParquetTest do
+defmodule ParquetTest do
   use ExUnit.Case, async: true
 
   setup do
