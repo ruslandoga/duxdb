@@ -1,5 +1,10 @@
 Experiments with DuckDB in Elixir.
 
+Precompiled native binaries are published for Apple silicon macOS and ARM64 or
+AMD64 Linux using glibc or musl. They include DuckDB itself, so users on these
+platforms do not need to install DuckDB separately. Other platforms compile from
+source and need the DuckDB headers and library installed.
+
 > [!NOTE]
 >
 > The current API tries to map 1-to-1 to DuckDB C API.
@@ -9,24 +14,8 @@ Experiments with DuckDB in Elixir.
 
 Here's how it can be used on its own:
 
-```sh
-brew install duckdb
-
-duckdb --version
-# v1.5.4 (Variegata) 08e34c447b
-
-brew --prefix duckdb
-# /opt/homebrew/opt/duckdb
-```
-
 ```elixir
-Mix.install([{:duxdb, github: "ruslandoga/duxdb"}],
-  force: true,
-  system_env: [
-    DUXDB_CFLAGS: "-I/opt/homebrew/opt/duckdb/include",
-    DUXDB_LDFLAGS: "-L/opt/homebrew/opt/duckdb/lib"
-  ]
-)
+Mix.install([{:duxdb, github: "ruslandoga/duxdb"}])
 
 db = DuxDB.open(":memory:", %{"max_memory" => "1GB"})
 conn = DuxDB.connect(db)
