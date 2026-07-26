@@ -8,16 +8,16 @@ defmodule DuxDB.MixProject do
     [
       app: :duxdb,
       version: @version,
-      elixir: "~> 1.17",
+      elixir: "~> 1.20",
       compilers: [:elixir_make | Mix.compilers()],
       make_precompiler: {:nif, CCPrecompiler},
       make_precompiler_url: "#{@github_url}/releases/download/v#{@version}/@{artefact_filename}",
       make_precompiler_filename: "duxdb",
       make_precompiler_priv_paths: ["duxdb.*", "libduckdb.*"],
-      make_precompiler_nif_versions: [versions: ["2.17"]],
+      make_precompiler_nif_versions: [versions: ["2.18"]],
       cc_precompiler: [
         cleanup: "clean",
-        only_listed_targets: true,
+        only_listed_targets: false,
         compilers: %{
           {:unix, :darwin} => %{
             "aarch64-apple-darwin" => {"/usr/bin/clang", "/usr/bin/clang++"}

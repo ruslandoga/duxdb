@@ -36,8 +36,8 @@ jobs:
 
       - uses: erlef/setup-beam@v1
         with:
-          otp-version: "26"
-          elixir-version: "1.17"
+          otp-version: "29"
+          elixir-version: "1.20"
 
       - name: Download DuckDB
         run: |

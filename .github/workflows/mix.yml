@@ -19,10 +19,10 @@ jobs:
       matrix:
         duckdb: ["1.5.4"]
         include:
-          # some old elixir version with the minimum supported OTP
+          # minimum supported Elixir and OTP
           # see https://hexdocs.pm/elixir/compatibility-and-deprecations.html#between-elixir-and-erlang-otp
-          - elixir: "1.17"
-            otp: "26"
+          - elixir: "1.20"
+            otp: "29"
           # the latest versions with all static checks
           - elixir: ">0"
             otp: ">0"
