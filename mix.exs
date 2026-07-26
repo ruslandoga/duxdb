@@ -51,7 +51,7 @@ defmodule DuxDB.MixProject do
     [
       {:elixir_make, "~> 0.8", runtime: false},
       {:cc_precompiler, "~> 0.1.8 or ~> 0.2", runtime: false},
-      {:stream_data, "~> 1.1", only: :test},
+      {:stream_data, "~> 1.1", only: [:dev, :test]},
       {:ex_doc, "~> 0.34", only: :docs},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:req, "~> 0.6.3", only: [:dev, :test]},

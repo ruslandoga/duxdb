@@ -42,7 +42,7 @@ defmodule Help do
     CREATE OR REPLACE SECRET secret (
       TYPE s3,
       PROVIDER config,
-      ENDPOINT '#{String.replace(credentials.endpoint, "http://", "")}',
+      ENDPOINT '#{String.replace_prefix(credentials.endpoint_url, "http://", "")}',
       KEY_ID '#{credentials.access_key_id}',
       SECRET '#{credentials.secret_access_key}',
       REGION '#{credentials.region}',
@@ -83,8 +83,24 @@ defmodule Help do
 
   def create_bucket(credentials, bucket) do
     s3_req = s3_req(credentials)
-    ExUnit.Callbacks.on_exit(fn -> Req.delete!(s3_req, url: "s3://#{bucket}") end)
     %{status: 200} = Req.put!(s3_req, url: "s3://#{bucket}")
+    :ok
+  end
+
+  def delete_bucket(credentials, bucket) do
+    Req.delete!(s3_req(credentials), url: "s3://#{bucket}")
+    :ok
+  end
+
+  def put_object(credentials, bucket, key, contents) do
+    %{status: 200} =
+      Req.put!(s3_req(credentials), url: "s3://#{bucket}/#{key}", body: contents)
+
+    :ok
+  end
+
+  def delete_object(credentials, bucket, key) do
+    Req.delete!(s3_req(credentials), url: "s3://#{bucket}/#{key}")
     :ok
   end
 end

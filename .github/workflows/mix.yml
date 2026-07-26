@@ -70,7 +70,17 @@ jobs:
       - run: mix format --check-formatted
         if: ${{ matrix.lint }}
 
-      - run: docker run -d -p 9000:9000 minio/minio server /data
+      - name: Start MinIO
+        run: |
+          docker run -d --name minio -p 9000:9000 minio/minio server /data
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:9000/minio/health/live; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs minio
+          exit 1
 
       - run: mix test --include minio
         env:
