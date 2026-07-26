@@ -1,5 +1,10 @@
 Experiments with DuckDB in Elixir.
 
+Precompiled native binaries are published for Apple silicon macOS, ARM64 Linux,
+and AMD64 Linux. They include DuckDB itself, so users on these platforms do not
+need to install DuckDB separately. Other platforms compile from source and need
+the DuckDB headers and library installed.
+
 > [!NOTE]
 >
 > The current API tries to map 1-to-1 to DuckDB C API.

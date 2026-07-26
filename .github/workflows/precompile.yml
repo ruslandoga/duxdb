@@ -1,0 +1,66 @@
+name: precompile
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+env:
+  MIX_ENV: prod
+  CC_PRECOMPILER_PRECOMPILE_ONLY_LOCAL: "true"
+  DUCKDB_VERSION: "1.5.4"
+
+jobs:
+  precompile:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - target: aarch64-apple-darwin
+            runner: macos-14
+            duckdb_asset: libduckdb-osx-universal.zip
+          - target: aarch64-linux-gnu
+            runner: ubuntu-24.04-arm
+            duckdb_asset: libduckdb-linux-arm64.zip
+          - target: x86_64-linux-gnu
+            runner: ubuntu-24.04
+            duckdb_asset: libduckdb-linux-amd64.zip
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: "26"
+          elixir-version: "1.17"
+
+      - name: Download DuckDB
+        run: |
+          curl -fL \
+            "https://github.com/duckdb/duckdb/releases/download/v${DUCKDB_VERSION}/${{ matrix.duckdb_asset }}" \
+            -o libduckdb.zip
+          unzip libduckdb.zip -d libduckdb
+
+      - name: Build artifact
+        env:
+          DUXDB_CFLAGS: -I${{ github.workspace }}/libduckdb
+          DUXDB_LDFLAGS: -L${{ github.workspace }}/libduckdb
+          DUXDB_LIB_DIR: ${{ github.workspace }}/libduckdb
+          ELIXIR_MAKE_CACHE_DIR: ${{ github.workspace }}/cache
+        run: |
+          mkdir -p "${ELIXIR_MAKE_CACHE_DIR}"
+          mix deps.get
+          mix elixir_make.precompile
+
+      - name: Upload release artifacts
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            cache/duxdb*.tar.gz
+            cache/duxdb*.sha256
