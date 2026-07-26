@@ -69,10 +69,15 @@ defmodule ParquetTest do
       DuxDB.bind_varchar(stmt, DuxDB.bind_parameter_index(stmt, "path"), path)
       result = DuxDB.execute_prepared(stmt)
 
-      assert fetch_rows(result) == [
-               [1, "created", ~D[2026-07-24], true],
-               [2, "updated", ~D[2026-07-25], false],
-               [3, nil, ~D[2026-07-26], true]
+      # Each map returned by Help.fetch_chunks/1 represents one DuckDB data
+      # chunk, with column names mapped to their decoded vectors.
+      assert Help.fetch_chunks(result) == [
+               %{
+                 "active" => [true, false, true],
+                 "happened_on" => [~D[2026-07-24], ~D[2026-07-25], ~D[2026-07-26]],
+                 "id" => [1, 2, 3],
+                 "name" => ["created", "updated", nil]
+               }
              ]
     end
   end
@@ -131,9 +136,11 @@ defmodule ParquetTest do
       DuxDB.bind_varchar(stmt, DuxDB.bind_parameter_index(stmt, "glob"), glob)
       result = DuxDB.execute_prepared(stmt)
 
-      assert fetch_rows(result) == [
-               ["Pixel", 3],
-               ["iPhone", 1]
+      assert Help.fetch_chunks(result) == [
+               %{
+                 "mobile_phone_model" => ["Pixel", "iPhone"],
+                 "users" => [3, 1]
+               }
              ]
     end
   end
@@ -191,26 +198,89 @@ defmodule ParquetTest do
       DuxDB.bind_varchar(stmt, DuxDB.bind_parameter_index(stmt, "glob"), glob)
       result = DuxDB.execute_prepared(stmt)
 
-      assert fetch_rows(result) == [
-               [102, 2500],
-               [103, 4000]
+      assert Help.fetch_chunks(result) == [
+               %{
+                 "amount_cents" => [2500, 4000],
+                 "order_id" => [102, 103]
+               }
              ]
     end
   end
 
-  # DuxDB mirrors DuckDB's chunk-oriented C API. A result may contain multiple
-  # chunks, while each chunk exposes one vector per column. Transposing those
-  # vectors produces the row-shaped values that are convenient for assertions.
-  defp fetch_rows(result) do
-    Stream.repeatedly(fn -> DuxDB.fetch_chunk(result) end)
-    |> Stream.take_while(&is_reference/1)
-    |> Enum.flat_map(fn chunk ->
-      columns =
-        for idx <- 0..(DuxDB.data_chunk_get_column_count(chunk) - 1) do
-          DuxDB.data_chunk_get_vector(chunk, idx)
-        end
+  describe "chapter 4: querying Parquet on S3-compatible storage" do
+    @describetag :minio
 
-      Enum.zip_with(columns, & &1)
-    end)
+    setup %{conn: conn} do
+      credentials = Help.s3_credentials(:minio)
+      bucket = "duxdb-parquet-#{System.unique_integer([:positive])}"
+
+      Help.setup_bucket(credentials, bucket)
+      Help.attach_s3(conn, credentials)
+
+      {:ok, bucket: bucket, credentials: credentials}
+    end
+
+    test "writes a Parquet object and queries it in place", %{
+      bucket: bucket,
+      conn: conn,
+      credentials: credentials
+    } do
+      key = "orders.parquet"
+      s3_path = "s3://#{bucket}/#{key}"
+
+      # httpfs gives DuckDB a filesystem abstraction over S3-compatible APIs.
+      # It supports reads, multipart writes, and globs for Parquet datasets:
+      # https://duckdb.org/docs/stable/core_extensions/httpfs/s3api
+      #
+      # MinIO stands in for S3 here so the integration test is deterministic and
+      # does not require cloud credentials. The same SQL and s3:// URL shape work
+      # with AWS S3 and other compatible object stores.
+      Help.setup_object(credentials, bucket, key)
+
+      DuxDB.query(
+        conn,
+        """
+        COPY (
+          SELECT *
+          FROM (VALUES
+            (1, 'eu',   'paid',    1200),
+            (2, 'us',   'pending', 1800),
+            (3, 'eu',   'paid',    2300),
+            (4, 'apac', 'paid',     900)
+          ) orders(order_id, region, status, amount_cents)
+        ) TO '#{s3_path}' (
+          FORMAT PARQUET,
+          COMPRESSION ZSTD,
+          PARQUET_VERSION V2
+        )
+        """
+      )
+
+      # Parquet metadata and HTTP range requests let DuckDB fetch relevant
+      # columns and row groups instead of downloading the whole remote object:
+      # https://duckdb.org/docs/stable/core_extensions/httpfs/https#partial-reading
+      stmt =
+        DuxDB.prepare(
+          conn,
+          """
+          SELECT region, count(*) AS orders, sum(amount_cents) AS revenue_cents
+          FROM read_parquet($path)
+          WHERE status = 'paid'
+          GROUP BY region
+          ORDER BY revenue_cents DESC
+          """
+        )
+
+      DuxDB.bind_varchar(stmt, DuxDB.bind_parameter_index(stmt, "path"), s3_path)
+      result = DuxDB.execute_prepared(stmt)
+
+      assert Help.fetch_chunks(result) == [
+               %{
+                 "orders" => [2, 1],
+                 "region" => ["eu", "apac"],
+                 "revenue_cents" => [3500, 900]
+               }
+             ]
+    end
   end
 end
