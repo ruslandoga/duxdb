@@ -14,24 +14,10 @@
 defmodule ParquetTest do
   use ExUnit.Case, async: true
 
-  setup context do
-    conn = DuxDB.connect(DuxDB.open())
-
-    if context[:minio] do
-      credentials = Help.s3_credentials(:minio)
-      bucket = "duxdb-parquet-#{System.unique_integer([:positive])}"
-
-      Help.setup_bucket(credentials, bucket)
-      Help.attach_s3(conn, credentials)
-
-      {:ok, bucket: bucket, conn: conn, credentials: credentials}
-    else
-      {:ok, conn: conn}
-    end
-  end
-
   @tag :tmp_dir
-  test "round-trips typed and nullable data", %{conn: conn, tmp_dir: tmp_dir} do
+  test "round-trips typed and nullable data", %{tmp_dir: tmp_dir} do
+    db = DuxDB.open()
+    conn = DuxDB.connect(db)
     path = Path.join(tmp_dir, "events.parquet")
 
     # COPY can export a query directly; no intermediate DuckDB table is
@@ -93,7 +79,10 @@ defmodule ParquetTest do
   end
 
   @tag :tmp_dir
-  test "filters, aggregates, and sorts across a file glob", %{conn: conn, tmp_dir: tmp_dir} do
+  test "filters, aggregates, and sorts across a file glob", %{tmp_dir: tmp_dir} do
+    db = DuxDB.open()
+    conn = DuxDB.connect(db)
+
     # Real data lakes commonly expose a logical dataset as many Parquet files.
     # DuckDB accepts a glob and scans all matching files as one relation:
     # https://duckdb.org/docs/stable/data/multiple_files/overview
@@ -154,7 +143,9 @@ defmodule ParquetTest do
   end
 
   @tag :tmp_dir
-  test "writes and prunes Hive-style partitions", %{conn: conn, tmp_dir: tmp_dir} do
+  test "writes and prunes Hive-style partitions", %{tmp_dir: tmp_dir} do
+    db = DuxDB.open()
+    conn = DuxDB.connect(db)
     dataset_path = Path.join(tmp_dir, "orders")
 
     # PARTITION_BY writes Hive-style directories such as
@@ -214,11 +205,15 @@ defmodule ParquetTest do
   end
 
   @tag :minio
-  test "writes a Parquet object and queries it in place", %{
-    bucket: bucket,
-    conn: conn,
-    credentials: credentials
-  } do
+  test "writes a Parquet object and queries it in place" do
+    db = DuxDB.open()
+    conn = DuxDB.connect(db)
+    credentials = Help.s3_credentials(:minio)
+    bucket = "duxdb-parquet-#{System.unique_integer([:positive])}"
+
+    Help.setup_bucket(credentials, bucket)
+    Help.attach_s3(conn, credentials)
+
     key = "orders.parquet"
     s3_path = "s3://#{bucket}/#{key}"
 
