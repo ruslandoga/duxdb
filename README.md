@@ -14,24 +14,8 @@ source and need the DuckDB headers and library installed.
 
 Here's how it can be used on its own:
 
-```sh
-brew install duckdb
-
-duckdb --version
-# v1.5.5 (Variegata) d8cdaa33fd
-
-brew --prefix duckdb
-# /opt/homebrew/opt/duckdb
-```
-
 ```elixir
-Mix.install([{:duxdb, github: "ruslandoga/duxdb"}],
-  force: true,
-  system_env: [
-    DUXDB_CFLAGS: "-I/opt/homebrew/opt/duckdb/include",
-    DUXDB_LDFLAGS: "-L/opt/homebrew/opt/duckdb/lib"
-  ]
-)
+Mix.install([{:duxdb, github: "ruslandoga/duxdb"}])
 
 db = DuxDB.open(":memory:", %{"max_memory" => "1GB"})
 conn = DuxDB.connect(db)
