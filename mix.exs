@@ -9,6 +9,7 @@ defmodule DuxDB.MixProject do
       app: :duxdb,
       version: @version,
       elixir: "~> 1.20",
+      elixirc_paths: elixirc_paths(Mix.env()),
       compilers: [:elixir_make | Mix.compilers()],
       make_precompiler: {:nif, CCPrecompiler},
       make_precompiler_url: "#{@github_url}/releases/download/v#{@version}/@{artefact_filename}",
@@ -34,8 +35,9 @@ defmodule DuxDB.MixProject do
       ],
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      # dialyzer
+      test_coverage: [ignore_modules: [Help]],
       dialyzer: [
+        plt_add_apps: [:ex_unit],
         plt_local_path: "plts",
         plt_core_path: "plts"
       ]
@@ -46,13 +48,18 @@ defmodule DuxDB.MixProject do
     [extra_applications: [:logger]]
   end
 
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_env), do: ["lib"]
+
   defp deps do
     [
       {:elixir_make, "~> 0.8", runtime: false},
       {:cc_precompiler, "~> 0.1.8 or ~> 0.2", runtime: false},
-      {:stream_data, "~> 1.1", only: :test},
+      {:stream_data, "~> 1.1", only: [:dev, :test]},
       {:ex_doc, "~> 0.34", only: :docs},
-      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false}
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
+      {:req, "~> 0.6.3", only: [:dev, :test]},
+      {:req_s3, "~> 0.2.4", only: [:dev, :test]}
     ]
   end
 end
