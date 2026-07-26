@@ -880,6 +880,33 @@ duxdb_data_chunk_get_vector(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
+duxdb_extract_statements_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    duxdb_conn *conn;
+    if (!enif_get_resource(env, argv[0], conn_t, (void **)&conn) || !(conn->duck))
+        return make_badarg(env, argv[0]);
+
+    ErlNifBinary query;
+    if (!enif_inspect_iolist_as_binary(env, argv[1], &query))
+        return make_badarg(env, argv[1]);
+
+    duckdb_extracted_statements stmts;
+
+    int size = duckdb_extract_statements(conn->duck, (const char *)query.data, &stmts);
+    const char *error = duckdb_extract_statements_error(stmts);
+
+    if (error)
+    {
+        duckdb_destroy_extracted(&stmts);
+        ERL_NIF_TERM e = make_binary(env, error, strlen(error));
+        return e;
+    }
+
+    duckdb_destroy_extracted(&stmts);
+    return enif_make_int(env, size);
+}
+
+static ERL_NIF_TERM
 duxdb_prepare_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
     duxdb_conn *conn;
@@ -1352,6 +1379,8 @@ static ErlNifFunc nif_funcs[] = {
     {"destroy_data_chunk", 1, duxdb_destroy_data_chunk, 0},
     {"data_chunk_get_column_count", 1, duxdb_data_chunk_get_column_count, 0},
     {"data_chunk_get_vector_nif", 2, duxdb_data_chunk_get_vector, 0},
+
+    {"extract_statements_nif", 2, duxdb_extract_statements_nif, ERL_NIF_DIRTY_JOB_CPU_BOUND},
 
     {"prepare_nif", 2, duxdb_prepare_nif, ERL_NIF_DIRTY_JOB_CPU_BOUND},
 
