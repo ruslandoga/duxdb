@@ -36,7 +36,11 @@ defmodule DuxDB.MixProject do
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       test_coverage: [ignore_modules: [Help]],
-      dialyzer: [plt_local_path: "plts", plt_core_path: "plts"]
+      dialyzer: [
+        plt_add_apps: [:ex_unit],
+        plt_local_path: "plts",
+        plt_core_path: "plts"
+      ]
     ]
   end
 

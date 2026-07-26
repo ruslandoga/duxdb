@@ -81,26 +81,26 @@ defmodule Help do
     )
   end
 
-  def create_bucket(credentials, bucket) do
+  def setup_bucket(credentials, bucket) do
     s3_req = s3_req(credentials)
+    ExUnit.Callbacks.on_exit(fn -> Req.delete!(s3_req, url: "s3://#{bucket}") end)
     %{status: 200} = Req.put!(s3_req, url: "s3://#{bucket}")
     :ok
   end
 
-  def delete_bucket(credentials, bucket) do
-    Req.delete!(s3_req(credentials), url: "s3://#{bucket}")
+  def setup_object(credentials, bucket, key) do
+    s3_req = s3_req(credentials)
+    url = "s3://#{bucket}/#{key}"
+    ExUnit.Callbacks.on_exit(fn -> Req.delete!(s3_req, url: url) end)
     :ok
   end
 
-  def put_object(credentials, bucket, key, contents) do
-    %{status: 200} =
-      Req.put!(s3_req(credentials), url: "s3://#{bucket}/#{key}", body: contents)
+  def setup_object(credentials, bucket, key, contents) do
+    setup_object(credentials, bucket, key)
+    s3_req = s3_req(credentials)
+    url = "s3://#{bucket}/#{key}"
+    %{status: 200} = Req.put!(s3_req, url: url, body: contents)
 
-    :ok
-  end
-
-  def delete_object(credentials, bucket, key) do
-    Req.delete!(s3_req(credentials), url: "s3://#{bucket}/#{key}")
     :ok
   end
 end

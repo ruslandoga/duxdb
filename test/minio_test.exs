@@ -5,8 +5,7 @@ defmodule MinioTest do
   setup do
     credentials = Help.s3_credentials(:minio)
     bucket = "duxdb-#{System.unique_integer([:positive])}"
-    Help.create_bucket(credentials, bucket)
-    on_exit(fn -> Help.delete_bucket(credentials, bucket) end)
+    Help.setup_bucket(credentials, bucket)
 
     conn = DuxDB.connect(DuxDB.open())
     Help.attach_s3(conn, credentials)
@@ -19,9 +18,8 @@ defmodule MinioTest do
     conn: conn,
     credentials: credentials
   } do
-    on_exit(fn -> Help.delete_object(credentials, bucket, "input.csv") end)
-    Help.put_object(credentials, bucket, "input.csv", "id,name\n1,one\n2,two\n")
-    on_exit(fn -> Help.delete_object(credentials, bucket, "output.parquet") end)
+    Help.setup_object(credentials, bucket, "input.csv", "id,name\n1,one\n2,two\n")
+    Help.setup_object(credentials, bucket, "output.parquet")
 
     DuxDB.query(conn, """
     COPY (
