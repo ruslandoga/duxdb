@@ -17,7 +17,7 @@ jobs:
 
     strategy:
       matrix:
-        duckdb: ["1.5.4"]
+        duckdb: ["1.5.5"]
         include:
           # minimum supported Elixir and OTP
           # see https://hexdocs.pm/elixir/compatibility-and-deprecations.html#between-elixir-and-erlang-otp

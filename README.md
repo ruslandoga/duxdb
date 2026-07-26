@@ -18,7 +18,7 @@ Here's how it can be used on its own:
 brew install duckdb
 
 duckdb --version
-# v1.5.4 (Variegata) 08e34c447b
+# v1.5.5 (Variegata) d8cdaa33fd
 
 brew --prefix duckdb
 # /opt/homebrew/opt/duckdb

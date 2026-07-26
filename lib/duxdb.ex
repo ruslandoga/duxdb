@@ -22,7 +22,7 @@ defmodule DuxDB do
   Returns the version of the linked DuckDB library.
 
       iex> DuxDB.library_version()
-      "v1.5.4"
+      "v1.5.5"
 
   See https://duckdb.org/docs/api/c/api#duckdb_library_version
   """
@@ -33,7 +33,7 @@ defmodule DuxDB do
   Returns the total amount of configuration options available.
 
       iex> DuxDB.config_count()
-      291
+      299
 
   See https://duckdb.org/docs/api/c/api#duckdb_config_count
   """
@@ -47,7 +47,7 @@ defmodule DuxDB do
       {"__delta_only_variant_encoding_enabled", "Enables the Parquet reader to identify a Variant structurally."}
 
       iex> DuxDB.get_config_flag(DuxDB.config_count() + 1)
-      ** (ArgumentError) argument error: 292
+      ** (ArgumentError) argument error: 300
 
   See https://duckdb.org/docs/api/c/api#duckdb_get_config_flag
   """
