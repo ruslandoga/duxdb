@@ -70,7 +70,24 @@ jobs:
       - run: mix format --check-formatted
         if: ${{ matrix.lint }}
 
-      - run: mix test
+      - name: Start MinIO
+        run: |
+          docker run -d --name minio -p 9000:9000 minio/minio server /data
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:9000/minio/health/live; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs minio
+          exit 1
+
+      - run: mix test --include minio
+        env:
+          AWS_REGION: us-east-1
+          AWS_ACCESS_KEY_ID: minioadmin
+          AWS_SECRET_ACCESS_KEY: minioadmin
+          AWS_ENDPOINT_URL_S3: http://127.0.0.1:9000
 
       - name: Restore PLTs cache
         if: ${{ matrix.dialyzer }}

@@ -106,7 +106,7 @@ defmodule DuxDBTest do
     end
 
     property "DATE", %{query: query} do
-      check all(d <- date()) do
+      check all d <- Help.date() do
         assert query.("select DATE '#{d}'") == d
       end
     end
@@ -118,7 +118,7 @@ defmodule DuxDBTest do
     end
 
     property "TIME", %{query: query} do
-      check all(t <- time()) do
+      check all t <- Help.time() do
         assert query.("select TIME '#{t}'") == t
       end
     end
@@ -138,7 +138,7 @@ defmodule DuxDBTest do
     end
 
     property "TIMESTAMP", %{query: query} do
-      check all(t <- naive_datetime()) do
+      check all t <- Help.naive_datetime() do
         assert query.("select TIMESTAMP '#{t}'") == t
       end
     end
@@ -179,30 +179,28 @@ defmodule DuxDBTest do
     end
 
     property "HUGEINT", %{query: query} do
-      check all(i <- integer()) do
+      check all i <- integer() do
         assert query.("select HUGEINT '#{i}'") == i
       end
 
-      check all(i16 <- integer(-32768..32767)) do
+      check all i16 <- integer(-32768..32767) do
         assert query.("select HUGEINT '#{i16}'") == i16
       end
 
-      check all(i32 <- integer(-2_147_483_648..2_147_483_647)) do
+      check all i32 <- integer(-2_147_483_648..2_147_483_647) do
         assert query.("select HUGEINT '#{i32}'") == i32
       end
 
-      check all(i64 <- integer(-9_223_372_036_854_775_808..9_223_372_036_854_775_807)) do
+      check all i64 <- integer(-9_223_372_036_854_775_808..9_223_372_036_854_775_807) do
         assert query.("select HUGEINT '#{i64}'") == i64
       end
 
-      check all(
-              i128 <-
-                integer(-0x80000000000000000000000000000000..0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
-            ) do
+      check all i128 <-
+                  integer(-0x80000000000000000000000000000000..0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF) do
         assert query.("select HUGEINT '#{i128}'") == i128
       end
 
-      check all(upper <- integer(), lower <- integer()) do
+      check all upper <- integer(), lower <- integer() do
         i = Bitwise.bsl(upper, 64) + lower
         assert query.("select HUGEINT '#{i}'") == i
       end
@@ -236,20 +234,18 @@ defmodule DuxDBTest do
           """
         )
 
-      check all(
-              bool <- boolean(),
-              text <- string(:printable),
-              blob <- binary(),
-              i64 <- integer(-0x8000000000000000..0x7FFFFFFFFFFFFFFF),
-              u64 <- integer(0..0xFFFFFFFFFFFFFFFF),
-              f64 <- float(),
-              date <- date(),
-              time <- time(),
-              timestamp <- naive_datetime(),
-              hugeint <-
-                integer(-0x80000000000000000000000000000000..0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF),
-              uhugeint <- integer(0..0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
-            ) do
+      check all bool <- boolean(),
+                text <- string(:printable),
+                blob <- binary(),
+                i64 <- integer(-0x8000000000000000..0x7FFFFFFFFFFFFFFF),
+                u64 <- integer(0..0xFFFFFFFFFFFFFFFF),
+                f64 <- float(),
+                date <- Help.date(),
+                time <- Help.time(),
+                timestamp <- Help.naive_datetime(),
+                hugeint <-
+                  integer(-0x80000000000000000000000000000000..0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF),
+                uhugeint <- integer(0..0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF) do
         DuxDB.bind_boolean(stmt, DuxDB.bind_parameter_index(stmt, "bool"), bool)
         DuxDB.bind_varchar(stmt, DuxDB.bind_parameter_index(stmt, "text"), text)
         DuxDB.bind_blob(stmt, DuxDB.bind_parameter_index(stmt, "blob"), blob)
@@ -263,7 +259,7 @@ defmodule DuxDBTest do
         DuxDB.bind_time(stmt, DuxDB.bind_parameter_index(stmt, "time"), time)
         DuxDB.bind_timestamp(stmt, DuxDB.bind_parameter_index(stmt, "timestamp"), timestamp)
 
-        assert fetch_chunks(DuxDB.execute_prepared(stmt)) == [
+        assert Help.fetch_chunks(DuxDB.execute_prepared(stmt)) == [
                  %{
                    "blob" => [blob],
                    "bool" => [bool],
@@ -280,49 +276,6 @@ defmodule DuxDBTest do
                  }
                ]
       end
-    end
-  end
-
-  defp fetch_chunks(result) do
-    case DuxDB.fetch_chunk(result) do
-      nil -> []
-      chunk -> [fetch_vectors(chunk, result) | fetch_chunks(result)]
-    end
-  end
-
-  defp fetch_vectors(chunk, result) do
-    Map.new(0..(DuxDB.data_chunk_get_column_count(chunk) - 1), fn idx ->
-      {DuxDB.column_name(result, idx), DuxDB.data_chunk_get_vector(chunk, idx)}
-    end)
-  end
-
-  defp time do
-    gen all(
-          hour <- StreamData.integer(0..23),
-          minute <- StreamData.integer(0..59),
-          second <- StreamData.integer(0..59),
-          micros <- StreamData.integer(0..999_999)
-        ) do
-      Time.new!(hour, minute, second, {micros, 6})
-    end
-  end
-
-  defp date do
-    gen all(
-          year <- StreamData.integer(0..9999),
-          month <- StreamData.integer(1..12),
-          day <- StreamData.integer(1..28)
-        ) do
-      Date.new!(year, month, day)
-    end
-  end
-
-  defp naive_datetime do
-    gen all(
-          date <- date(),
-          time <- time()
-        ) do
-      NaiveDateTime.new!(date, time)
     end
   end
 end
