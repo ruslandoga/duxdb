@@ -1,20 +1,20 @@
-defmodule DuxDB.MixProject do
+defmodule DuckNIF.MixProject do
   use Mix.Project
 
-  @version "0.1.0-rc.1"
+  @version "0.1.0-rc.2"
   @github_url "https://github.com/ruslandoga/duxdb"
 
   def project do
     [
-      app: :duxdb,
+      app: :duck_nif,
       version: @version,
       elixir: "~> 1.20",
       elixirc_paths: elixirc_paths(Mix.env()),
       compilers: [:elixir_make | Mix.compilers()],
       make_precompiler: {:nif, CCPrecompiler},
       make_precompiler_url: "#{@github_url}/releases/download/v#{@version}/@{artefact_filename}",
-      make_precompiler_filename: "duxdb",
-      make_precompiler_priv_paths: ["duxdb.*", "libduckdb.*"],
+      make_precompiler_filename: "duck_nif",
+      make_precompiler_priv_paths: ["duck_nif.*", "libduckdb.*"],
       make_precompiler_nif_versions: [versions: ["2.18"]],
       cc_precompiler: [
         cleanup: "clean",

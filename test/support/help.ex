@@ -2,15 +2,15 @@ defmodule Help do
   use ExUnitProperties
 
   def fetch_chunks(result) do
-    case DuxDB.fetch_chunk(result) do
+    case DuckNIF.fetch_chunk(result) do
       nil -> []
       chunk -> [fetch_vectors(chunk, result) | fetch_chunks(result)]
     end
   end
 
   def fetch_vectors(chunk, result) do
-    Map.new(0..(DuxDB.data_chunk_get_column_count(chunk) - 1), fn idx ->
-      {DuxDB.column_name(result, idx), DuxDB.data_chunk_get_vector(chunk, idx)}
+    Map.new(0..(DuckNIF.data_chunk_get_column_count(chunk) - 1), fn idx ->
+      {DuckNIF.column_name(result, idx), DuckNIF.data_chunk_get_vector(chunk, idx)}
     end)
   end
 
@@ -38,7 +38,7 @@ defmodule Help do
   end
 
   def attach_s3(conn, credentials) do
-    DuxDB.query(conn, """
+    DuckNIF.query(conn, """
     CREATE OR REPLACE SECRET secret (
       TYPE s3,
       PROVIDER config,

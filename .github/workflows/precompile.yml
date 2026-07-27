@@ -48,9 +48,9 @@ jobs:
 
       - name: Build artifact
         env:
-          DUXDB_CFLAGS: -I${{ github.workspace }}/libduckdb
-          DUXDB_LDFLAGS: -L${{ github.workspace }}/libduckdb
-          DUXDB_LIB_DIR: ${{ github.workspace }}/libduckdb
+          DUCK_NIF_CFLAGS: -I${{ github.workspace }}/libduckdb
+          DUCK_NIF_LDFLAGS: -L${{ github.workspace }}/libduckdb
+          DUCK_NIF_LIB_DIR: ${{ github.workspace }}/libduckdb
           ELIXIR_MAKE_CACHE_DIR: ${{ github.workspace }}/cache
         run: |
           mkdir -p "${ELIXIR_MAKE_CACHE_DIR}"
@@ -62,8 +62,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            cache/duxdb*.tar.gz
-            cache/duxdb*.sha256
+            cache/duck_nif*.tar.gz
+            cache/duck_nif*.sha256
 
   precompile-musl:
     name: ${{ matrix.target }}
@@ -103,9 +103,9 @@ jobs:
               unzip -q /tmp/libduckdb.zip -d /tmp/libduckdb
               mix local.hex --force
               mix deps.get
-              export DUXDB_CFLAGS=-I/tmp/libduckdb
-              export DUXDB_LDFLAGS=-L/tmp/libduckdb
-              export DUXDB_LIB_DIR=/tmp/libduckdb
+              export DUCK_NIF_CFLAGS=-I/tmp/libduckdb
+              export DUCK_NIF_LDFLAGS=-L/tmp/libduckdb
+              export DUCK_NIF_LIB_DIR=/tmp/libduckdb
               export ELIXIR_MAKE_CACHE_DIR=/work/cache
               mix elixir_make.precompile
             '
@@ -115,8 +115,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            cache/duxdb*.tar.gz
-            cache/duxdb*.sha256
+            cache/duck_nif*.tar.gz
+            cache/duck_nif*.sha256
 
   checksums:
     name: checksums
