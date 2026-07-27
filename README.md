@@ -1,12 +1,5 @@
 Experiments with DuckDB in Elixir.
 
-Maintainers can find the release process in [doc/RELEASING.md](doc/RELEASING.md).
-
-Precompiled native binaries are published for Apple silicon macOS and ARM64 or
-AMD64 Linux using glibc or musl. They include DuckDB itself, so users on these
-platforms do not need to install DuckDB separately. Other platforms compile from
-source and need the DuckDB headers and library installed.
-
 > [!NOTE]
 >
 > The current API tries to map 1-to-1 to DuckDB C API.
@@ -17,7 +10,7 @@ source and need the DuckDB headers and library installed.
 Here's how it can be used on its own:
 
 ```elixir
-Mix.install([{:duck_nif, github: "ruslandoga/duxdb"}])
+Mix.install([{:duck_nif, github: "ruslandoga/duck_nif"}])
 
 db = DuckNIF.open(":memory:", %{"max_memory" => "1GB"})
 conn = DuckNIF.connect(db)
