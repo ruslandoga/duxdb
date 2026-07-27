@@ -16,8 +16,8 @@ defmodule ParquetTest do
 
   @tag :tmp_dir
   test "round-trips typed and nullable data", %{tmp_dir: tmp_dir} do
-    db = DuxDB.open()
-    conn = DuxDB.connect(db)
+    db = DuckNIF.open()
+    conn = DuckNIF.connect(db)
     path = Path.join(tmp_dir, "events.parquet")
 
     # COPY can export a query directly; no intermediate DuckDB table is
@@ -30,7 +30,7 @@ defmodule ParquetTest do
     #
     # ZSTD is a useful size/speed trade-off. For interoperability with readers
     # that do not support newer encodings, use PARQUET_VERSION V1 instead.
-    DuxDB.query(
+    DuckNIF.query(
       conn,
       """
       COPY (
@@ -54,7 +54,7 @@ defmodule ParquetTest do
     # handling escaping, this lets an application prepare the analytical SQL
     # once and execute it for different files.
     stmt =
-      DuxDB.prepare(
+      DuckNIF.prepare(
         conn,
         """
         SELECT id, name, happened_on, active
@@ -63,8 +63,8 @@ defmodule ParquetTest do
         """
       )
 
-    DuxDB.bind_varchar(stmt, DuxDB.bind_parameter_index(stmt, "path"), path)
-    result = DuxDB.execute_prepared(stmt)
+    DuckNIF.bind_varchar(stmt, DuckNIF.bind_parameter_index(stmt, "path"), path)
+    result = DuckNIF.execute_prepared(stmt)
 
     # Each map returned by Help.fetch_chunks/1 represents one DuckDB data
     # chunk, with column names mapped to their decoded vectors.
@@ -80,8 +80,8 @@ defmodule ParquetTest do
 
   @tag :tmp_dir
   test "filters, aggregates, and sorts across a file glob", %{tmp_dir: tmp_dir} do
-    db = DuxDB.open()
-    conn = DuxDB.connect(db)
+    db = DuckNIF.open()
+    conn = DuckNIF.connect(db)
 
     # Real data lakes commonly expose a logical dataset as many Parquet files.
     # DuckDB accepts a glob and scans all matching files as one relation:
@@ -98,7 +98,7 @@ defmodule ParquetTest do
         ] do
       path = Path.join(tmp_dir, filename)
 
-      DuxDB.query(
+      DuckNIF.query(
         conn,
         """
         COPY (
@@ -120,7 +120,7 @@ defmodule ParquetTest do
     # columns and discards empty models before aggregation:
     # https://duckdb.org/docs/stable/data/parquet/overview#partial-reading
     stmt =
-      DuxDB.prepare(
+      DuckNIF.prepare(
         conn,
         """
         SELECT mobile_phone_model, count(DISTINCT user_id) AS users
@@ -131,8 +131,8 @@ defmodule ParquetTest do
         """
       )
 
-    DuxDB.bind_varchar(stmt, DuxDB.bind_parameter_index(stmt, "glob"), glob)
-    result = DuxDB.execute_prepared(stmt)
+    DuckNIF.bind_varchar(stmt, DuckNIF.bind_parameter_index(stmt, "glob"), glob)
+    result = DuckNIF.execute_prepared(stmt)
 
     assert Help.fetch_chunks(result) == [
              %{
@@ -144,15 +144,15 @@ defmodule ParquetTest do
 
   @tag :tmp_dir
   test "writes and prunes Hive-style partitions", %{tmp_dir: tmp_dir} do
-    db = DuxDB.open()
-    conn = DuxDB.connect(db)
+    db = DuckNIF.open()
+    conn = DuckNIF.connect(db)
     dataset_path = Path.join(tmp_dir, "orders")
 
     # PARTITION_BY writes Hive-style directories such as
     # year=2026/month=7/data_0.parquet. DuckDB's partitioned-write guide
     # covers filename patterns, append behavior, and overwrite semantics:
     # https://duckdb.org/docs/stable/data/partitioning/partitioned_writes
-    DuxDB.query(
+    DuckNIF.query(
       conn,
       """
       COPY (
@@ -183,7 +183,7 @@ defmodule ParquetTest do
     # partition pruning are a good fit:
     # https://duckdb.org/docs/stable/guides/performance/file_formats
     stmt =
-      DuxDB.prepare(
+      DuckNIF.prepare(
         conn,
         """
         SELECT order_id, amount_cents
@@ -193,8 +193,8 @@ defmodule ParquetTest do
         """
       )
 
-    DuxDB.bind_varchar(stmt, DuxDB.bind_parameter_index(stmt, "glob"), glob)
-    result = DuxDB.execute_prepared(stmt)
+    DuckNIF.bind_varchar(stmt, DuckNIF.bind_parameter_index(stmt, "glob"), glob)
+    result = DuckNIF.execute_prepared(stmt)
 
     assert Help.fetch_chunks(result) == [
              %{
@@ -206,10 +206,10 @@ defmodule ParquetTest do
 
   @tag :minio
   test "writes a Parquet object and queries it in place" do
-    db = DuxDB.open()
-    conn = DuxDB.connect(db)
+    db = DuckNIF.open()
+    conn = DuckNIF.connect(db)
     credentials = Help.s3_credentials(:minio)
-    bucket = "duxdb-parquet-#{System.unique_integer([:positive])}"
+    bucket = "duck-nif-parquet-#{System.unique_integer([:positive])}"
 
     Help.setup_bucket(credentials, bucket)
     Help.attach_s3(conn, credentials)
@@ -226,7 +226,7 @@ defmodule ParquetTest do
     # with AWS S3 and other compatible object stores.
     Help.setup_object(credentials, bucket, key)
 
-    DuxDB.query(
+    DuckNIF.query(
       conn,
       """
       COPY (
@@ -249,7 +249,7 @@ defmodule ParquetTest do
     # columns and row groups instead of downloading the whole remote object:
     # https://duckdb.org/docs/stable/core_extensions/httpfs/https#partial-reading
     stmt =
-      DuxDB.prepare(
+      DuckNIF.prepare(
         conn,
         """
         SELECT region, count(*) AS orders, sum(amount_cents) AS revenue_cents
@@ -260,8 +260,8 @@ defmodule ParquetTest do
         """
       )
 
-    DuxDB.bind_varchar(stmt, DuxDB.bind_parameter_index(stmt, "path"), s3_path)
-    result = DuxDB.execute_prepared(stmt)
+    DuckNIF.bind_varchar(stmt, DuckNIF.bind_parameter_index(stmt, "path"), s3_path)
+    result = DuckNIF.execute_prepared(stmt)
 
     assert Help.fetch_chunks(result) == [
              %{

@@ -64,8 +64,8 @@ jobs:
 
       - run: mix compile --warnings-as-errors
         env:
-          DUXDB_CFLAGS: -I./libduckdb/
-          DUXDB_LDFLAGS: -L./libduckdb -Wl,-rpath=./libduckdb
+          DUCK_NIF_CFLAGS: -I./libduckdb/
+          DUCK_NIF_LDFLAGS: -L./libduckdb -Wl,-rpath=./libduckdb
 
       - run: mix format --check-formatted
         if: ${{ matrix.lint }}

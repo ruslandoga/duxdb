@@ -37,37 +37,37 @@ static ErlNifResourceType *stmt_t;
 typedef struct
 {
     duckdb_config duck;
-} duxdb_config;
+} duck_nif_config;
 
 typedef struct
 {
     duckdb_database duck;
-} duxdb_db;
+} duck_nif_db;
 
 typedef struct
 {
     duckdb_connection duck;
-} duxdb_conn;
+} duck_nif_conn;
 
 typedef struct
 {
     duckdb_result duck;
-} duxdb_result;
+} duck_nif_result;
 
 typedef struct
 {
     duckdb_data_chunk duck;
-} duxdb_data_chunk;
+} duck_nif_data_chunk;
 
 typedef struct
 {
     duckdb_prepared_statement duck;
-} duxdb_stmt;
+} duck_nif_stmt;
 
 static void
 config_destructor(ErlNifEnv *env, void *arg)
 {
-    duckdb_config config = ((duxdb_config *)arg)->duck;
+    duckdb_config config = ((duck_nif_config *)arg)->duck;
     if (config)
     {
         duckdb_destroy_config(&config);
@@ -78,7 +78,7 @@ config_destructor(ErlNifEnv *env, void *arg)
 static void
 db_destructor(ErlNifEnv *env, void *arg)
 {
-    duckdb_database db = ((duxdb_db *)arg)->duck;
+    duckdb_database db = ((duck_nif_db *)arg)->duck;
     if (db)
     {
         duckdb_close(&db);
@@ -89,7 +89,7 @@ db_destructor(ErlNifEnv *env, void *arg)
 static void
 conn_destructor(ErlNifEnv *env, void *arg)
 {
-    duckdb_connection conn = ((duxdb_conn *)arg)->duck;
+    duckdb_connection conn = ((duck_nif_conn *)arg)->duck;
     if (conn)
     {
         duckdb_disconnect(&conn);
@@ -100,7 +100,7 @@ conn_destructor(ErlNifEnv *env, void *arg)
 static void
 result_destructor(ErlNifEnv *env, void *arg)
 {
-    duckdb_result result = ((duxdb_result *)arg)->duck;
+    duckdb_result result = ((duck_nif_result *)arg)->duck;
     if (result.internal_data)
     {
         duckdb_destroy_result(&result);
@@ -111,7 +111,7 @@ result_destructor(ErlNifEnv *env, void *arg)
 static void
 data_chunk_destructor(ErlNifEnv *env, void *arg)
 {
-    duckdb_data_chunk chunk = ((duxdb_data_chunk *)arg)->duck;
+    duckdb_data_chunk chunk = ((duck_nif_data_chunk *)arg)->duck;
     if (chunk)
     {
         duckdb_destroy_data_chunk(&chunk);
@@ -122,7 +122,7 @@ data_chunk_destructor(ErlNifEnv *env, void *arg)
 static void
 stmt_destructor(ErlNifEnv *env, void *arg)
 {
-    duckdb_prepared_statement stmt = ((duxdb_stmt *)arg)->duck;
+    duckdb_prepared_statement stmt = ((duck_nif_stmt *)arg)->duck;
     if (stmt)
     {
         duckdb_destroy_prepare(&stmt);
@@ -156,27 +156,27 @@ on_load(ErlNifEnv *env, void **priv, ERL_NIF_TERM info)
     am_elixir_duration = enif_make_atom(env, "Elixir.Duration");
     am_elixir_calendar_iso = enif_make_atom(env, "Elixir.Calendar.ISO");
 
-    config_t = enif_open_resource_type(env, "duxdb", "config", config_destructor, ERL_NIF_RT_CREATE, NULL);
+    config_t = enif_open_resource_type(env, "duck_nif", "config", config_destructor, ERL_NIF_RT_CREATE, NULL);
     if (!config_t)
         return -1;
 
-    db_t = enif_open_resource_type(env, "duxdb", "db", db_destructor, ERL_NIF_RT_CREATE, NULL);
+    db_t = enif_open_resource_type(env, "duck_nif", "db", db_destructor, ERL_NIF_RT_CREATE, NULL);
     if (!db_t)
         return -1;
 
-    conn_t = enif_open_resource_type(env, "duxdb", "conn", conn_destructor, ERL_NIF_RT_CREATE, NULL);
+    conn_t = enif_open_resource_type(env, "duck_nif", "conn", conn_destructor, ERL_NIF_RT_CREATE, NULL);
     if (!conn_t)
         return -1;
 
-    result_t = enif_open_resource_type(env, "duxdb", "result", result_destructor, ERL_NIF_RT_CREATE, NULL);
+    result_t = enif_open_resource_type(env, "duck_nif", "result", result_destructor, ERL_NIF_RT_CREATE, NULL);
     if (!result_t)
         return -1;
 
-    data_chunk_t = enif_open_resource_type(env, "duxdb", "data_chunk", data_chunk_destructor, ERL_NIF_RT_CREATE, NULL);
+    data_chunk_t = enif_open_resource_type(env, "duck_nif", "data_chunk", data_chunk_destructor, ERL_NIF_RT_CREATE, NULL);
     if (!data_chunk_t)
         return -1;
 
-    stmt_t = enif_open_resource_type(env, "duxdb", "stmt", stmt_destructor, ERL_NIF_RT_CREATE, NULL);
+    stmt_t = enif_open_resource_type(env, "duck_nif", "stmt", stmt_destructor, ERL_NIF_RT_CREATE, NULL);
     if (!stmt_t)
         return -1;
 
@@ -201,16 +201,16 @@ make_badarg(ErlNifEnv *env, ERL_NIF_TERM arg)
 }
 
 static ERL_NIF_TERM
-duxdb_library_version(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_library_version(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
     const char *version = duckdb_library_version();
     return make_binary(env, version, strlen(version));
 }
 
 static ERL_NIF_TERM
-duxdb_create_config(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_create_config(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_config *config = enif_alloc_resource(config_t, sizeof(duxdb_config));
+    duck_nif_config *config = enif_alloc_resource(config_t, sizeof(duck_nif_config));
     if (!config)
         return enif_raise_exception(env, am_system_limit);
 
@@ -229,14 +229,14 @@ duxdb_create_config(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_config_count(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_config_count(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
     size_t count = duckdb_config_count();
     return enif_make_uint64(env, count);
 }
 
 static ERL_NIF_TERM
-duxdb_get_config_flag(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_get_config_flag(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
     ErlNifUInt64 idx;
     if (!enif_get_uint64(env, argv[0], &idx))
@@ -253,9 +253,9 @@ duxdb_get_config_flag(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_set_config(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_set_config(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_config *config;
+    duck_nif_config *config;
     if (!enif_get_resource(env, argv[0], config_t, (void **)&config) || !(config->duck))
         return make_badarg(env, argv[0]);
 
@@ -274,9 +274,9 @@ duxdb_set_config(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_destroy_config(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_destroy_config(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_config *config;
+    duck_nif_config *config;
     if (!enif_get_resource(env, argv[0], config_t, (void **)&config))
         return make_badarg(env, argv[0]);
 
@@ -290,7 +290,7 @@ duxdb_destroy_config(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_open_ext(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_open_ext(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
     const char *duck_path;
     ErlNifBinary path;
@@ -303,7 +303,7 @@ duxdb_open_ext(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
         return make_badarg(env, argv[0]);
 
     duckdb_config duck_config;
-    duxdb_config *config;
+    duck_nif_config *config;
 
     if (enif_get_resource(env, argv[1], config_t, (void **)&config) && (config->duck))
         duck_config = config->duck;
@@ -312,7 +312,7 @@ duxdb_open_ext(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     else
         return make_badarg(env, argv[1]);
 
-    duxdb_db *db = enif_alloc_resource(db_t, sizeof(duxdb_db));
+    duck_nif_db *db = enif_alloc_resource(db_t, sizeof(duck_nif_db));
     if (!db)
         return enif_raise_exception(env, am_system_limit);
 
@@ -338,9 +338,9 @@ duxdb_open_ext(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_close(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_close(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_db *db;
+    duck_nif_db *db;
     if (!enif_get_resource(env, argv[0], db_t, (void **)&db))
         return make_badarg(env, argv[0]);
 
@@ -354,13 +354,13 @@ duxdb_close(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_connect(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_connect(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_db *db;
+    duck_nif_db *db;
     if (!enif_get_resource(env, argv[0], db_t, (void **)&db) || !(db->duck))
         return make_badarg(env, argv[0]);
 
-    duxdb_conn *conn = enif_alloc_resource(conn_t, sizeof(duxdb_conn));
+    duck_nif_conn *conn = enif_alloc_resource(conn_t, sizeof(duck_nif_conn));
     if (!conn)
         return enif_raise_exception(env, am_system_limit);
 
@@ -381,9 +381,9 @@ duxdb_connect(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_interrupt(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_interrupt(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_conn *conn;
+    duck_nif_conn *conn;
     if (!enif_get_resource(env, argv[0], conn_t, (void **)&conn) || !(conn->duck))
         return make_badarg(env, argv[0]);
 
@@ -392,9 +392,9 @@ duxdb_interrupt(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_query_progress(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_query_progress(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_conn *conn;
+    duck_nif_conn *conn;
     if (!enif_get_resource(env, argv[0], conn_t, (void **)&conn) || !(conn->duck))
         return make_badarg(env, argv[0]);
 
@@ -408,9 +408,9 @@ duxdb_query_progress(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_disconnect(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_disconnect(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_conn *conn;
+    duck_nif_conn *conn;
     if (!enif_get_resource(env, argv[0], conn_t, (void **)&conn))
         return make_badarg(env, argv[0]);
 
@@ -424,9 +424,9 @@ duxdb_disconnect(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_query(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_query(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_conn *conn;
+    duck_nif_conn *conn;
     if (!enif_get_resource(env, argv[0], conn_t, (void **)&conn) || !(conn->duck))
         return make_badarg(env, argv[0]);
 
@@ -434,7 +434,7 @@ duxdb_query(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     if (!enif_inspect_iolist_as_binary(env, argv[1], &query))
         return make_badarg(env, argv[1]);
 
-    duxdb_result *result = enif_alloc_resource(result_t, sizeof(duxdb_result));
+    duck_nif_result *result = enif_alloc_resource(result_t, sizeof(duck_nif_result));
     if (!result)
         return enif_raise_exception(env, am_system_limit);
 
@@ -462,9 +462,9 @@ duxdb_query(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_destroy_result(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_destroy_result(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_result *result;
+    duck_nif_result *result;
     if (!enif_get_resource(env, argv[0], result_t, (void **)&result))
         return make_badarg(env, argv[0]);
 
@@ -478,9 +478,9 @@ duxdb_destroy_result(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_column_name(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_column_name(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_result *result;
+    duck_nif_result *result;
     if (!enif_get_resource(env, argv[0], result_t, (void **)&result) || !(result->duck.internal_data))
         return make_badarg(env, argv[0]);
 
@@ -496,9 +496,9 @@ duxdb_column_name(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_result_statement_type(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_result_statement_type(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_result *result;
+    duck_nif_result *result;
     if (!enif_get_resource(env, argv[0], result_t, (void **)&result) || !(result->duck.internal_data))
         return make_badarg(env, argv[0]);
 
@@ -507,9 +507,9 @@ duxdb_result_statement_type(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_column_count(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_column_count(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_result *result;
+    duck_nif_result *result;
     if (!enif_get_resource(env, argv[0], result_t, (void **)&result) || !(result->duck.internal_data))
         return make_badarg(env, argv[0]);
 
@@ -518,9 +518,9 @@ duxdb_column_count(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_rows_changed(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_rows_changed(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_result *result;
+    duck_nif_result *result;
     if (!enif_get_resource(env, argv[0], result_t, (void **)&result) || !(result->duck.internal_data))
         return make_badarg(env, argv[0]);
 
@@ -529,9 +529,9 @@ duxdb_rows_changed(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_result_return_type(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_result_return_type(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_result *result;
+    duck_nif_result *result;
     if (!enif_get_resource(env, argv[0], result_t, (void **)&result) || !(result->duck.internal_data))
         return make_badarg(env, argv[0]);
 
@@ -540,13 +540,13 @@ duxdb_result_return_type(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_fetch_chunk(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_fetch_chunk(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_result *result;
+    duck_nif_result *result;
     if (!enif_get_resource(env, argv[0], result_t, (void **)&result) || !(result->duck.internal_data))
         return make_badarg(env, argv[0]);
 
-    duxdb_data_chunk *chunk = enif_alloc_resource(data_chunk_t, sizeof(duxdb_data_chunk));
+    duck_nif_data_chunk *chunk = enif_alloc_resource(data_chunk_t, sizeof(duck_nif_data_chunk));
     if (!chunk)
         return enif_raise_exception(env, am_system_limit);
 
@@ -564,9 +564,9 @@ duxdb_fetch_chunk(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_destroy_data_chunk(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_destroy_data_chunk(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_data_chunk *chunk;
+    duck_nif_data_chunk *chunk;
     if (!enif_get_resource(env, argv[0], data_chunk_t, (void **)&chunk))
         return make_badarg(env, argv[0]);
 
@@ -580,9 +580,9 @@ duxdb_destroy_data_chunk(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_data_chunk_get_column_count(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_data_chunk_get_column_count(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_data_chunk *chunk;
+    duck_nif_data_chunk *chunk;
     if (!enif_get_resource(env, argv[0], data_chunk_t, (void **)&chunk) || !(chunk->duck))
         return make_badarg(env, argv[0]);
 
@@ -794,9 +794,9 @@ MAKE_LIST_FROM_VECTOR(duckdb_hugeint, make_hugeint)
 MAKE_LIST_FROM_VECTOR(duckdb_uhugeint, make_uhugeint)
 
 static ERL_NIF_TERM
-duxdb_data_chunk_get_vector(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_data_chunk_get_vector(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_data_chunk *chunk;
+    duck_nif_data_chunk *chunk;
     if (!enif_get_resource(env, argv[0], data_chunk_t, (void **)&chunk) || !(chunk->duck))
         return make_badarg(env, argv[0]);
 
@@ -880,9 +880,9 @@ duxdb_data_chunk_get_vector(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_prepare_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_prepare_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_conn *conn;
+    duck_nif_conn *conn;
     if (!enif_get_resource(env, argv[0], conn_t, (void **)&conn) || !(conn->duck))
         return make_badarg(env, argv[0]);
 
@@ -890,7 +890,7 @@ duxdb_prepare_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     if (!enif_inspect_iolist_as_binary(env, argv[1], &query))
         return make_badarg(env, argv[1]);
 
-    duxdb_stmt *stmt = enif_alloc_resource(stmt_t, sizeof(duxdb_stmt));
+    duck_nif_stmt *stmt = enif_alloc_resource(stmt_t, sizeof(duck_nif_stmt));
     if (!stmt)
         return enif_raise_exception(env, am_system_limit);
 
@@ -909,9 +909,9 @@ duxdb_prepare_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_destroy_prepare(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_destroy_prepare(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_stmt *stmt;
+    duck_nif_stmt *stmt;
     if (!enif_get_resource(env, argv[0], stmt_t, (void **)&stmt))
         return make_badarg(env, argv[0]);
 
@@ -925,9 +925,9 @@ duxdb_destroy_prepare(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_nparams(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_nparams(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_stmt *stmt;
+    duck_nif_stmt *stmt;
     if (!enif_get_resource(env, argv[0], stmt_t, (void **)&stmt) || !(stmt->duck))
         return make_badarg(env, argv[0]);
 
@@ -936,9 +936,9 @@ duxdb_nparams(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_parameter_name(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_parameter_name(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_stmt *stmt;
+    duck_nif_stmt *stmt;
     if (!enif_get_resource(env, argv[0], stmt_t, (void **)&stmt) || !(stmt->duck))
         return make_badarg(env, argv[0]);
 
@@ -957,9 +957,9 @@ duxdb_parameter_name(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_param_type(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_param_type(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_stmt *stmt;
+    duck_nif_stmt *stmt;
     if (!enif_get_resource(env, argv[0], stmt_t, (void **)&stmt) || !(stmt->duck))
         return make_badarg(env, argv[0]);
 
@@ -975,9 +975,9 @@ duxdb_param_type(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_bind_parameter_index(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_bind_parameter_index(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_stmt *stmt;
+    duck_nif_stmt *stmt;
     if (!enif_get_resource(env, argv[0], stmt_t, (void **)&stmt) || !(stmt->duck))
         return make_badarg(env, argv[0]);
 
@@ -993,9 +993,9 @@ duxdb_bind_parameter_index(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_clear_bindings(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_clear_bindings(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_stmt *stmt;
+    duck_nif_stmt *stmt;
     if (!enif_get_resource(env, argv[0], stmt_t, (void **)&stmt) || !(stmt->duck))
         return make_badarg(env, argv[0]);
 
@@ -1006,9 +1006,9 @@ duxdb_clear_bindings(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_prepared_statement_type(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_prepared_statement_type(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_stmt *stmt;
+    duck_nif_stmt *stmt;
     if (!enif_get_resource(env, argv[0], stmt_t, (void **)&stmt) || !(stmt->duck))
         return make_badarg(env, argv[0]);
 
@@ -1017,13 +1017,13 @@ duxdb_prepared_statement_type(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[
 }
 
 static ERL_NIF_TERM
-duxdb_execute_prepared(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_execute_prepared(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_stmt *stmt;
+    duck_nif_stmt *stmt;
     if (!enif_get_resource(env, argv[0], stmt_t, (void **)&stmt) || !(stmt->duck))
         return make_badarg(env, argv[0]);
 
-    duxdb_result *result = enif_alloc_resource(result_t, sizeof(duxdb_result));
+    duck_nif_result *result = enif_alloc_resource(result_t, sizeof(duck_nif_result));
     if (!result)
         return enif_raise_exception(env, am_system_limit);
 
@@ -1050,9 +1050,9 @@ duxdb_execute_prepared(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_bind_boolean(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_bind_boolean(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_stmt *stmt;
+    duck_nif_stmt *stmt;
     if (!enif_get_resource(env, argv[0], stmt_t, (void **)&stmt) || !(stmt->duck))
         return make_badarg(env, argv[0]);
 
@@ -1082,9 +1082,9 @@ duxdb_bind_boolean(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_bind_double(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_bind_double(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_stmt *stmt;
+    duck_nif_stmt *stmt;
     if (!enif_get_resource(env, argv[0], stmt_t, (void **)&stmt) || !(stmt->duck))
         return make_badarg(env, argv[0]);
 
@@ -1100,9 +1100,9 @@ duxdb_bind_double(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_bind_int64(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_bind_int64(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_stmt *stmt;
+    duck_nif_stmt *stmt;
     if (!enif_get_resource(env, argv[0], stmt_t, (void **)&stmt) || !(stmt->duck))
         return make_badarg(env, argv[0]);
 
@@ -1118,9 +1118,9 @@ duxdb_bind_int64(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_bind_uint64(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_bind_uint64(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_stmt *stmt;
+    duck_nif_stmt *stmt;
     if (!enif_get_resource(env, argv[0], stmt_t, (void **)&stmt) || !(stmt->duck))
         return make_badarg(env, argv[0]);
 
@@ -1136,9 +1136,9 @@ duxdb_bind_uint64(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_bind_varchar(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_bind_varchar(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_stmt *stmt;
+    duck_nif_stmt *stmt;
     if (!enif_get_resource(env, argv[0], stmt_t, (void **)&stmt) || !(stmt->duck))
         return make_badarg(env, argv[0]);
 
@@ -1154,9 +1154,9 @@ duxdb_bind_varchar(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_bind_blob(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_bind_blob(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_stmt *stmt;
+    duck_nif_stmt *stmt;
     if (!enif_get_resource(env, argv[0], stmt_t, (void **)&stmt) || !(stmt->duck))
         return make_badarg(env, argv[0]);
 
@@ -1172,9 +1172,9 @@ duxdb_bind_blob(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_bind_date(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_bind_date(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_stmt *stmt;
+    duck_nif_stmt *stmt;
     if (!enif_get_resource(env, argv[0], stmt_t, (void **)&stmt) || !(stmt->duck))
         return make_badarg(env, argv[0]);
 
@@ -1190,9 +1190,9 @@ duxdb_bind_date(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_bind_time(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_bind_time(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_stmt *stmt;
+    duck_nif_stmt *stmt;
     if (!enif_get_resource(env, argv[0], stmt_t, (void **)&stmt) || !(stmt->duck))
         return make_badarg(env, argv[0]);
 
@@ -1208,9 +1208,9 @@ duxdb_bind_time(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_bind_timestamp(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_bind_timestamp(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_stmt *stmt;
+    duck_nif_stmt *stmt;
     if (!enif_get_resource(env, argv[0], stmt_t, (void **)&stmt) || !(stmt->duck))
         return make_badarg(env, argv[0]);
 
@@ -1226,9 +1226,9 @@ duxdb_bind_timestamp(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_bind_interval(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_bind_interval(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_stmt *stmt;
+    duck_nif_stmt *stmt;
     if (!enif_get_resource(env, argv[0], stmt_t, (void **)&stmt) || !(stmt->duck))
         return make_badarg(env, argv[0]);
 
@@ -1256,9 +1256,9 @@ duxdb_bind_interval(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_bind_hugeint(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_bind_hugeint(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_stmt *stmt;
+    duck_nif_stmt *stmt;
     if (!enif_get_resource(env, argv[0], stmt_t, (void **)&stmt) || !(stmt->duck))
         return make_badarg(env, argv[0]);
 
@@ -1278,9 +1278,9 @@ duxdb_bind_hugeint(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_bind_uhugeint(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_bind_uhugeint(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_stmt *stmt;
+    duck_nif_stmt *stmt;
     if (!enif_get_resource(env, argv[0], stmt_t, (void **)&stmt) || !(stmt->duck))
         return make_badarg(env, argv[0]);
 
@@ -1300,9 +1300,9 @@ duxdb_bind_uhugeint(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-duxdb_bind_null(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+duck_nif_bind_null(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    duxdb_stmt *stmt;
+    duck_nif_stmt *stmt;
     if (!enif_get_resource(env, argv[0], stmt_t, (void **)&stmt) || !(stmt->duck))
         return make_badarg(env, argv[0]);
 
@@ -1314,73 +1314,73 @@ duxdb_bind_null(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ErlNifFunc nif_funcs[] = {
-    {"library_version", 0, duxdb_library_version, 0},
+    {"library_version", 0, duck_nif_library_version, 0},
 
-    {"config_count", 0, duxdb_config_count, 0},
-    {"get_config_flag", 1, duxdb_get_config_flag, 0},
+    {"config_count", 0, duck_nif_config_count, 0},
+    {"get_config_flag", 1, duck_nif_get_config_flag, 0},
 
     // The create_config function is typically called first and can take a
     // significant amount of time on the initial call, likely due to the library
     // initialization or resource loading it triggers. For this reason, it is
     // scheduled as a CPU-bound dirty job to avoid blocking the main Erlang scheduler.
-    {"create_config", 0, duxdb_create_config, ERL_NIF_DIRTY_JOB_CPU_BOUND},
-    {"set_config", 3, duxdb_set_config, ERL_NIF_DIRTY_JOB_CPU_BOUND},
-    {"destroy_config", 1, duxdb_destroy_config, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+    {"create_config", 0, duck_nif_create_config, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+    {"set_config", 3, duck_nif_set_config, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+    {"destroy_config", 1, duck_nif_destroy_config, ERL_NIF_DIRTY_JOB_CPU_BOUND},
 
-    {"open_ext", 2, duxdb_open_ext, ERL_NIF_DIRTY_JOB_IO_BOUND},
-    {"close", 1, duxdb_close, ERL_NIF_DIRTY_JOB_IO_BOUND},
+    {"open_ext", 2, duck_nif_open_ext, ERL_NIF_DIRTY_JOB_IO_BOUND},
+    {"close", 1, duck_nif_close, ERL_NIF_DIRTY_JOB_IO_BOUND},
 
-    {"connect", 1, duxdb_connect, 0},
-    {"interrupt", 1, duxdb_interrupt, 0},
-    {"query_progress", 1, duxdb_query_progress, 0},
-    {"disconnect", 1, duxdb_disconnect, 0},
+    {"connect", 1, duck_nif_connect, 0},
+    {"interrupt", 1, duck_nif_interrupt, 0},
+    {"query_progress", 1, duck_nif_query_progress, 0},
+    {"disconnect", 1, duck_nif_disconnect, 0},
 
     // TODO remove, leave dirty only
-    {"query_nif", 2, duxdb_query, 0},
-    {"query_dirty_io_nif", 2, duxdb_query, ERL_NIF_DIRTY_JOB_IO_BOUND},
-    {"query_dirty_cpu_nif", 2, duxdb_query, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+    {"query_nif", 2, duck_nif_query, 0},
+    {"query_dirty_io_nif", 2, duck_nif_query, ERL_NIF_DIRTY_JOB_IO_BOUND},
+    {"query_dirty_cpu_nif", 2, duck_nif_query, ERL_NIF_DIRTY_JOB_CPU_BOUND},
 
-    {"destroy_result", 1, duxdb_destroy_result, 0},
-    {"column_name", 2, duxdb_column_name, 0},
-    {"result_statement_type", 1, duxdb_result_statement_type, 0},
-    {"column_count", 1, duxdb_column_count, 0},
-    {"rows_changed", 1, duxdb_rows_changed, 0},
-    {"result_return_type", 1, duxdb_result_return_type, 0},
+    {"destroy_result", 1, duck_nif_destroy_result, 0},
+    {"column_name", 2, duck_nif_column_name, 0},
+    {"result_statement_type", 1, duck_nif_result_statement_type, 0},
+    {"column_count", 1, duck_nif_column_count, 0},
+    {"rows_changed", 1, duck_nif_rows_changed, 0},
+    {"result_return_type", 1, duck_nif_result_return_type, 0},
 
-    {"fetch_chunk", 1, duxdb_fetch_chunk, 0},
+    {"fetch_chunk", 1, duck_nif_fetch_chunk, 0},
     // TODO destroy once empty
-    {"destroy_data_chunk", 1, duxdb_destroy_data_chunk, 0},
-    {"data_chunk_get_column_count", 1, duxdb_data_chunk_get_column_count, 0},
-    {"data_chunk_get_vector_nif", 2, duxdb_data_chunk_get_vector, 0},
+    {"destroy_data_chunk", 1, duck_nif_destroy_data_chunk, 0},
+    {"data_chunk_get_column_count", 1, duck_nif_data_chunk_get_column_count, 0},
+    {"data_chunk_get_vector_nif", 2, duck_nif_data_chunk_get_vector, 0},
 
-    {"prepare_nif", 2, duxdb_prepare_nif, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+    {"prepare_nif", 2, duck_nif_prepare_nif, ERL_NIF_DIRTY_JOB_CPU_BOUND},
 
-    {"destroy_prepare", 1, duxdb_destroy_prepare, 0},
-    {"nparams", 1, duxdb_nparams, 0},
-    {"parameter_name", 2, duxdb_parameter_name, 0},
-    {"param_type", 2, duxdb_param_type, 0},
-    {"bind_parameter_index_nif", 2, duxdb_bind_parameter_index, 0},
-    {"clear_bindings", 1, duxdb_clear_bindings, 0},
-    {"prepared_statement_type", 1, duxdb_prepared_statement_type, 0},
+    {"destroy_prepare", 1, duck_nif_destroy_prepare, 0},
+    {"nparams", 1, duck_nif_nparams, 0},
+    {"parameter_name", 2, duck_nif_parameter_name, 0},
+    {"param_type", 2, duck_nif_param_type, 0},
+    {"bind_parameter_index_nif", 2, duck_nif_bind_parameter_index, 0},
+    {"clear_bindings", 1, duck_nif_clear_bindings, 0},
+    {"prepared_statement_type", 1, duck_nif_prepared_statement_type, 0},
 
     // TODO remove, leave dirty only
-    {"execute_prepared_nif", 1, duxdb_execute_prepared, 0},
-    {"execute_prepared_dirty_io_nif", 1, duxdb_execute_prepared, ERL_NIF_DIRTY_JOB_IO_BOUND},
-    {"execute_prepared_dirty_cpu_nif", 1, duxdb_execute_prepared, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+    {"execute_prepared_nif", 1, duck_nif_execute_prepared, 0},
+    {"execute_prepared_dirty_io_nif", 1, duck_nif_execute_prepared, ERL_NIF_DIRTY_JOB_IO_BOUND},
+    {"execute_prepared_dirty_cpu_nif", 1, duck_nif_execute_prepared, ERL_NIF_DIRTY_JOB_CPU_BOUND},
 
-    {"bind_boolean", 3, duxdb_bind_boolean, 0},
-    {"bind_double", 3, duxdb_bind_double, 0},
-    {"bind_int64", 3, duxdb_bind_int64, 0},
-    {"bind_uint64", 3, duxdb_bind_uint64, 0},
-    {"bind_varchar", 3, duxdb_bind_varchar, 0},
-    {"bind_blob", 3, duxdb_bind_blob, 0},
-    {"bind_date_nif", 3, duxdb_bind_date, 0},
-    {"bind_time_nif", 3, duxdb_bind_time, 0},
-    {"bind_timestamp_nif", 3, duxdb_bind_timestamp, 0},
-    {"bind_interval_nif", 5, duxdb_bind_interval, 0},
-    {"bind_hugeint_nif", 4, duxdb_bind_hugeint, 0},
-    {"bind_uhugeint_nif", 4, duxdb_bind_uhugeint, 0},
-    {"bind_null", 2, duxdb_bind_null, 0},
+    {"bind_boolean", 3, duck_nif_bind_boolean, 0},
+    {"bind_double", 3, duck_nif_bind_double, 0},
+    {"bind_int64", 3, duck_nif_bind_int64, 0},
+    {"bind_uint64", 3, duck_nif_bind_uint64, 0},
+    {"bind_varchar", 3, duck_nif_bind_varchar, 0},
+    {"bind_blob", 3, duck_nif_bind_blob, 0},
+    {"bind_date_nif", 3, duck_nif_bind_date, 0},
+    {"bind_time_nif", 3, duck_nif_bind_time, 0},
+    {"bind_timestamp_nif", 3, duck_nif_bind_timestamp, 0},
+    {"bind_interval_nif", 5, duck_nif_bind_interval, 0},
+    {"bind_hugeint_nif", 4, duck_nif_bind_hugeint, 0},
+    {"bind_uhugeint_nif", 4, duck_nif_bind_uhugeint, 0},
+    {"bind_null", 2, duck_nif_bind_null, 0},
 };
 
-ERL_NIF_INIT(Elixir.DuxDB, nif_funcs, on_load, NULL, NULL, NULL)
+ERL_NIF_INIT(Elixir.DuckNIF, nif_funcs, on_load, NULL, NULL, NULL)

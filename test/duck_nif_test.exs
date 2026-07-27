@@ -1,15 +1,15 @@
-defmodule DuxDBTest do
+defmodule DuckNIFTest do
   use ExUnit.Case
   use ExUnitProperties
 
-  doctest DuxDB
-  doctest DuxDB.Error
+  doctest DuckNIF
+  doctest DuckNIF.Error
 
   describe "open/2" do
     test "fails on broken config" do
       assert_raise ArgumentError,
                    "Invalid Input Error: The following options were not recognized: sdf",
-                   fn -> DuxDB.open(":memory:", %{"sdf" => "asdf"}) end
+                   fn -> DuckNIF.open(":memory:", %{"sdf" => "asdf"}) end
     end
 
     test "fails on invalid path" do
@@ -17,55 +17,55 @@ defmodule DuxDBTest do
 
       assert_raise ArgumentError,
                    "IO Error: Cannot open file \"#{expanded_path}\": No such file or directory",
-                   fn -> DuxDB.open("tmp/somewhere/test.db", []) end
+                   fn -> DuckNIF.open("tmp/somewhere/test.db", []) end
     end
   end
 
   describe "close/1" do
     setup do
-      {:ok, db: DuxDB.open()}
+      {:ok, db: DuckNIF.open()}
     end
 
     test "is no-op if already closed", %{db: db} do
-      assert :ok == DuxDB.close(db)
-      assert :ok == DuxDB.close(db)
+      assert :ok == DuckNIF.close(db)
+      assert :ok == DuckNIF.close(db)
     end
 
     test "fails future operations", %{db: db} do
-      assert :ok == DuxDB.close(db)
-      assert_raise ArgumentError, fn -> DuxDB.connect(db) end
+      assert :ok == DuckNIF.close(db)
+      assert_raise ArgumentError, fn -> DuckNIF.connect(db) end
     end
   end
 
   describe "disconnect/1" do
     setup do
-      {:ok, conn: DuxDB.connect(DuxDB.open())}
+      {:ok, conn: DuckNIF.connect(DuckNIF.open())}
     end
 
     test "is no-op if already disconnected", %{conn: conn} do
-      assert :ok == DuxDB.disconnect(conn)
-      assert :ok == DuxDB.disconnect(conn)
+      assert :ok == DuckNIF.disconnect(conn)
+      assert :ok == DuckNIF.disconnect(conn)
     end
   end
 
   test "reading NULL mask" do
-    assert DuxDB.open()
-           |> DuxDB.connect()
-           |> DuxDB.query(
+    assert DuckNIF.open()
+           |> DuckNIF.connect()
+           |> DuckNIF.query(
              "SELECT CASE WHEN i%2=0 THEN NULL ELSE i END res_col FROM range(10) t(i)"
            )
-           |> DuxDB.fetch_chunk()
-           |> DuxDB.data_chunk_get_vector(0) == [nil, 1, nil, 3, nil, 5, nil, 7, nil, 9]
+           |> DuckNIF.fetch_chunk()
+           |> DuckNIF.data_chunk_get_vector(0) == [nil, 1, nil, 3, nil, 5, nil, 7, nil, 9]
   end
 
   test "reading string vector" do
-    assert DuxDB.open()
-           |> DuxDB.connect()
-           |> DuxDB.query(
+    assert DuckNIF.open()
+           |> DuckNIF.connect()
+           |> DuckNIF.query(
              "SELECT CASE WHEN i%2=0 THEN CONCAT('short_', i) ELSE CONCAT('longstringprefix', i) END FROM range(10) t(i)"
            )
-           |> DuxDB.fetch_chunk()
-           |> DuxDB.data_chunk_get_vector(0) == [
+           |> DuckNIF.fetch_chunk()
+           |> DuckNIF.data_chunk_get_vector(0) == [
              "short_0",
              "longstringprefix1",
              "short_2",
@@ -81,17 +81,17 @@ defmodule DuxDBTest do
 
   describe "DUCKDB_TYPE" do
     setup do
-      conn = DuxDB.connect(DuxDB.open())
+      conn = DuckNIF.connect(DuckNIF.open())
 
       query = fn sql ->
-        result = DuxDB.query(conn, sql)
+        result = DuckNIF.query(conn, sql)
 
         assert [value] =
                  result
-                 |> DuxDB.fetch_chunk()
-                 |> DuxDB.data_chunk_get_vector(0)
+                 |> DuckNIF.fetch_chunk()
+                 |> DuckNIF.data_chunk_get_vector(0)
 
-        refute DuxDB.fetch_chunk(result)
+        refute DuckNIF.fetch_chunk(result)
 
         value
       end
@@ -209,12 +209,12 @@ defmodule DuxDBTest do
 
   describe "bind and fetch" do
     setup do
-      {:ok, conn: DuxDB.connect(DuxDB.open())}
+      {:ok, conn: DuckNIF.connect(DuckNIF.open())}
     end
 
     property "all supported data types", %{conn: conn} do
       stmt =
-        DuxDB.prepare(
+        DuckNIF.prepare(
           conn,
           """
           select
@@ -246,20 +246,20 @@ defmodule DuxDBTest do
                 hugeint <-
                   integer(-0x80000000000000000000000000000000..0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF),
                 uhugeint <- integer(0..0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF) do
-        DuxDB.bind_boolean(stmt, DuxDB.bind_parameter_index(stmt, "bool"), bool)
-        DuxDB.bind_varchar(stmt, DuxDB.bind_parameter_index(stmt, "text"), text)
-        DuxDB.bind_blob(stmt, DuxDB.bind_parameter_index(stmt, "blob"), blob)
-        DuxDB.bind_int64(stmt, DuxDB.bind_parameter_index(stmt, "i64"), i64)
-        DuxDB.bind_hugeint(stmt, DuxDB.bind_parameter_index(stmt, "i128"), hugeint)
-        DuxDB.bind_uint64(stmt, DuxDB.bind_parameter_index(stmt, "u64"), u64)
-        DuxDB.bind_uhugeint(stmt, DuxDB.bind_parameter_index(stmt, "u128"), uhugeint)
-        DuxDB.bind_double(stmt, DuxDB.bind_parameter_index(stmt, "f64"), f64)
-        DuxDB.bind_null(stmt, DuxDB.bind_parameter_index(stmt, "null"))
-        DuxDB.bind_date(stmt, DuxDB.bind_parameter_index(stmt, "date"), date)
-        DuxDB.bind_time(stmt, DuxDB.bind_parameter_index(stmt, "time"), time)
-        DuxDB.bind_timestamp(stmt, DuxDB.bind_parameter_index(stmt, "timestamp"), timestamp)
+        DuckNIF.bind_boolean(stmt, DuckNIF.bind_parameter_index(stmt, "bool"), bool)
+        DuckNIF.bind_varchar(stmt, DuckNIF.bind_parameter_index(stmt, "text"), text)
+        DuckNIF.bind_blob(stmt, DuckNIF.bind_parameter_index(stmt, "blob"), blob)
+        DuckNIF.bind_int64(stmt, DuckNIF.bind_parameter_index(stmt, "i64"), i64)
+        DuckNIF.bind_hugeint(stmt, DuckNIF.bind_parameter_index(stmt, "i128"), hugeint)
+        DuckNIF.bind_uint64(stmt, DuckNIF.bind_parameter_index(stmt, "u64"), u64)
+        DuckNIF.bind_uhugeint(stmt, DuckNIF.bind_parameter_index(stmt, "u128"), uhugeint)
+        DuckNIF.bind_double(stmt, DuckNIF.bind_parameter_index(stmt, "f64"), f64)
+        DuckNIF.bind_null(stmt, DuckNIF.bind_parameter_index(stmt, "null"))
+        DuckNIF.bind_date(stmt, DuckNIF.bind_parameter_index(stmt, "date"), date)
+        DuckNIF.bind_time(stmt, DuckNIF.bind_parameter_index(stmt, "time"), time)
+        DuckNIF.bind_timestamp(stmt, DuckNIF.bind_parameter_index(stmt, "timestamp"), timestamp)
 
-        assert Help.fetch_chunks(DuxDB.execute_prepared(stmt)) == [
+        assert Help.fetch_chunks(DuckNIF.execute_prepared(stmt)) == [
                  %{
                    "blob" => [blob],
                    "bool" => [bool],

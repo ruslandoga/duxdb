@@ -1,4 +1,4 @@
-defmodule DuxDB do
+defmodule DuckNIF do
   @moduledoc "DuckDB in Elixir"
 
   @typedoc "A database object."
@@ -21,7 +21,7 @@ defmodule DuxDB do
   @doc """
   Returns the version of the linked DuckDB library.
 
-      iex> DuxDB.library_version()
+      iex> DuckNIF.library_version()
       "v1.5.5"
 
   See https://duckdb.org/docs/api/c/api#duckdb_library_version
@@ -32,7 +32,7 @@ defmodule DuxDB do
   @doc """
   Returns the total amount of configuration options available.
 
-      iex> DuxDB.config_count()
+      iex> DuckNIF.config_count()
       299
 
   See https://duckdb.org/docs/api/c/api#duckdb_config_count
@@ -43,10 +43,10 @@ defmodule DuxDB do
   @doc """
   Obtains a human-readable name and description of a specific configuration option.
 
-      iex> DuxDB.get_config_flag(0)
+      iex> DuckNIF.get_config_flag(0)
       {"__delta_only_variant_encoding_enabled", "Enables the Parquet reader to identify a Variant structurally."}
 
-      iex> DuxDB.get_config_flag(DuxDB.config_count() + 1)
+      iex> DuckNIF.get_config_flag(DuckNIF.config_count() + 1)
       ** (ArgumentError) argument error: 300
 
   See https://duckdb.org/docs/api/c/api#duckdb_get_config_flag
@@ -61,7 +61,7 @@ defmodule DuxDB do
   @doc """
   Opens an in-memory DuckDB database.
 
-      iex> db = DuxDB.open()
+      iex> db = DuckNIF.open()
       iex> is_reference(db)
       true
 
@@ -79,12 +79,12 @@ defmodule DuxDB do
   Opens a DuckDB database with a configuration.
 
       iex> path = "test.db"
-      iex> db = DuxDB.open(path, _config = %{"max_memory" => "8GB"})
+      iex> db = DuckNIF.open(path, _config = %{"max_memory" => "8GB"})
       iex> is_reference(db)
       true
 
       iex> bad_path = "/this/path/not/exists/test.db "
-      iex> DuxDB.open(bad_path)
+      iex> DuckNIF.open(bad_path)
       ** (ArgumentError) IO Error: Cannot open file "/this/path/not/exists/test.db ": No such file or directory
 
   The database is closed with `close/1` or on garbage collection.
@@ -126,8 +126,8 @@ defmodule DuxDB do
   @doc """
   Closes a DuckDB database.
 
-      iex> db = DuxDB.open(":memory:")
-      iex> DuxDB.close(db)
+      iex> db = DuckNIF.open(":memory:")
+      iex> DuckNIF.close(db)
       :ok
 
   See https://duckdb.org/docs/api/c/api#duckdb_close
@@ -138,8 +138,8 @@ defmodule DuxDB do
   @doc """
   Connects to a DuckDB database.
 
-      iex> db = DuxDB.open()
-      iex> conn = DuxDB.connect(db)
+      iex> db = DuckNIF.open()
+      iex> conn = DuckNIF.connect(db)
       iex> is_reference(conn)
       true
 
@@ -153,8 +153,8 @@ defmodule DuxDB do
   @doc """
   Interrupts a running query.
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> DuxDB.interrupt(conn)
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> DuckNIF.interrupt(conn)
       :ok
 
   See https://duckdb.org/docs/api/c/api#duckdb_interrupt
@@ -165,8 +165,8 @@ defmodule DuxDB do
   @doc """
   Gets progress of the running query.
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> DuxDB.query_progress(conn)
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> DuckNIF.query_progress(conn)
       {_percentage = -1.0, _rows_processed = 0, _total_rows_to_process = 0}
 
   See https://duckdb.org/docs/api/c/api#duckdb_query_progress
@@ -182,8 +182,8 @@ defmodule DuxDB do
   @doc """
   Disconnects from a DuckDB database.
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> DuxDB.disconnect(conn)
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> DuckNIF.disconnect(conn)
       :ok
 
   See https://duckdb.org/docs/api/c/api#duckdb_disconnect
@@ -200,9 +200,9 @@ defmodule DuxDB do
 
     Example:
 
-        iex> conn = DuxDB.connect(DuxDB.open())
-        iex> try do DuxDB.query(conn, "sel 1") rescue e -> e end
-        %DuxDB.Error{code: 14, message: "Parser Error: syntax error at or near \"sel\"\n\nLINE 1: sel 1\n        ^"}
+        iex> conn = DuckNIF.connect(DuckNIF.open())
+        iex> try do DuckNIF.query(conn, "sel 1") rescue e -> e end
+        %DuckNIF.Error{code: 14, message: "Parser Error: syntax error at or near \"sel\"\n\nLINE 1: sel 1\n        ^"}
 
     """
 
@@ -219,14 +219,14 @@ defmodule DuxDB do
   > If you expect the query to take longer than 1 millisecond,
   > consider using `query_dirty_cpu/2` or `query_dirty_io/2` instead.
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> result = DuxDB.query(conn, "SELECT 42")
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> result = DuckNIF.query(conn, "SELECT 42")
       iex> is_reference(result)
       true
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> try do DuxDB.query(conn, "SEL 42") rescue e -> e end
-      %DuxDB.Error{code: 14, message: "Parser Error: syntax error at or near \"SEL\"\n\nLINE 1: SEL 42\n        ^"}
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> try do DuckNIF.query(conn, "SEL 42") rescue e -> e end
+      %DuckNIF.Error{code: 14, message: "Parser Error: syntax error at or near \"SEL\"\n\nLINE 1: SEL 42\n        ^"}
 
   The result is destroyed with `destroy_result/1` or on garbage collection.
 
@@ -271,9 +271,9 @@ defmodule DuxDB do
   @doc """
   Closes the result and de-allocates all memory allocated for that connection.
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> result = DuxDB.query(conn, "SELECT 42")
-      iex> DuxDB.destroy_result(result)
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> result = DuckNIF.query(conn, "SELECT 42")
+      iex> DuckNIF.destroy_result(result)
       :ok
 
   See https://duckdb.org/docs/api/c/api#duckdb_destroy_result
@@ -284,14 +284,14 @@ defmodule DuxDB do
   @doc """
   Returns the column name of the specified column. Returns `nil` if the column is out of range.
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> result = DuxDB.query(conn, "SELECT 42 AS answer")
-      iex> DuxDB.column_name(result, 0)
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> result = DuckNIF.query(conn, "SELECT 42 AS answer")
+      iex> DuckNIF.column_name(result, 0)
       "answer"
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> result = DuxDB.query(conn, "SELECT 42 AS answer")
-      iex> DuxDB.column_name(result, 1)
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> result = DuckNIF.query(conn, "SELECT 42 AS answer")
+      iex> DuckNIF.column_name(result, 1)
       nil
 
   See https://duckdb.org/docs/api/c/api#duckdb_column_name
@@ -302,9 +302,9 @@ defmodule DuxDB do
   @doc """
   Returns the statement type of the statement that was executed.
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> result = DuxDB.query(conn, "SELECT 42 AS answer")
-      iex> DuxDB.result_statement_type(result)
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> result = DuckNIF.query(conn, "SELECT 42 AS answer")
+      iex> DuckNIF.result_statement_type(result)
       _select = 1
 
   See https://duckdb.org/docs/api/c/api#duckdb_result_statement_type
@@ -315,9 +315,9 @@ defmodule DuxDB do
   @doc """
   Returns the number of columns present in a the result object.
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> result = DuxDB.query(conn, "SELECT 42 AS answer, 'six times seven' AS question")
-      iex> DuxDB.column_count(result)
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> result = DuckNIF.query(conn, "SELECT 42 AS answer, 'six times seven' AS question")
+      iex> DuckNIF.column_count(result)
       2
 
   See https://duckdb.org/docs/api/c/api#duckdb_column_count
@@ -330,9 +330,9 @@ defmodule DuxDB do
   This is relevant only for INSERT/UPDATE/DELETE queries.
   For other queries the rows_changed will be 0.
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> result = DuxDB.query(conn, "SELECT 42 AS answer, 'six times seven' AS question")
-      iex> DuxDB.rows_changed(result)
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> result = DuckNIF.query(conn, "SELECT 42 AS answer, 'six times seven' AS question")
+      iex> DuckNIF.rows_changed(result)
       0
 
   See https://duckdb.org/docs/api/c/api#duckdb_rows_changed
@@ -343,9 +343,9 @@ defmodule DuxDB do
   @doc """
   Returns the return_type of the given result.
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> result = DuxDB.query(conn, "SELECT 42")
-      iex> DuxDB.result_return_type(result)
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> result = DuckNIF.query(conn, "SELECT 42")
+      iex> DuckNIF.result_return_type(result)
       _query_result = 3
 
   See https://duckdb.org/docs/api/c/api#duckdb_result_return_type
@@ -356,8 +356,8 @@ defmodule DuxDB do
   @doc """
   Fetches the next chunk of data from the result.
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> chunk = DuxDB.fetch_chunk(DuxDB.query(conn, "SELECT 42 AS answer"))
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> chunk = DuckNIF.fetch_chunk(DuckNIF.query(conn, "SELECT 42 AS answer"))
       iex> is_reference(chunk)
       true
 
@@ -371,9 +371,9 @@ defmodule DuxDB do
   @doc """
   Destroys the data chunk and de-allocates all memory allocated for that chunk.
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> chunk = DuxDB.fetch_chunk(DuxDB.query(conn, "SELECT 42 AS answer"))
-      iex> DuxDB.destroy_data_chunk(chunk)
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> chunk = DuckNIF.fetch_chunk(DuckNIF.query(conn, "SELECT 42 AS answer"))
+      iex> DuckNIF.destroy_data_chunk(chunk)
       :ok
 
   See https://duckdb.org/docs/api/c/api#duckdb_destroy_data_chunk
@@ -384,9 +384,9 @@ defmodule DuxDB do
   @doc """
   Retrieves the number of columns in a data chunk.
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> chunk = DuxDB.fetch_chunk(DuxDB.query(conn, "SELECT 42 AS answer, 'six times seven' AS question"))
-      iex> DuxDB.data_chunk_get_column_count(chunk)
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> chunk = DuckNIF.fetch_chunk(DuckNIF.query(conn, "SELECT 42 AS answer, 'six times seven' AS question"))
+      iex> DuckNIF.data_chunk_get_column_count(chunk)
       2
 
   See https://duckdb.org/docs/api/c/api#duckdb_data_chunk_get_column_count
@@ -399,7 +399,7 @@ defmodule DuxDB do
   @doc """
   Retrieves the vector (as a list) at the specified column index in the data chunk.
 
-      iex> conn = DuxDB.connect(DuxDB.open())
+      iex> conn = DuckNIF.connect(DuckNIF.open())
       iex> sql = \"""
       ...> SELECT * FROM (VALUES
       ...>   (1, 'Alice', DATE '2023-01-01', TRUE),
@@ -407,9 +407,9 @@ defmodule DuxDB do
       ...>   (3, 'Charlie', DATE '2024-10-29', TRUE)
       ...> ) AS users(id, name, join_date, is_active);
       ...> \"""
-      iex> chunk = DuxDB.fetch_chunk(DuxDB.query(conn, sql))
-      iex> Enum.map(0..DuxDB.data_chunk_get_column_count(chunk) - 1, fn i ->
-      ...>   DuxDB.data_chunk_get_vector(chunk, i)
+      iex> chunk = DuckNIF.fetch_chunk(DuckNIF.query(conn, sql))
+      iex> Enum.map(0..DuckNIF.data_chunk_get_column_count(chunk) - 1, fn i ->
+      ...>   DuckNIF.data_chunk_get_vector(chunk, i)
       ...> end)
       [
         _id = [1, 2, 3],
@@ -434,13 +434,13 @@ defmodule DuxDB do
   @doc ~S"""
   Creates a prepared statement object from a query.
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> stmt = DuxDB.prepare(conn, "SELECT ?")
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> stmt = DuckNIF.prepare(conn, "SELECT ?")
       iex> is_reference(stmt)
       true
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> try do DuxDB.prepare(conn, "SEL ?") rescue e -> e end
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> try do DuckNIF.prepare(conn, "SEL ?") rescue e -> e end
       %ArgumentError{message: "Parser Error: syntax error at or near \"SEL\"\n\nLINE 1: SEL ?\n        ^"}
 
   The statement is destroyed with `destroy_prepare/1` or on garbage collection.
@@ -460,9 +460,9 @@ defmodule DuxDB do
   @doc """
   Destroys the prepared statement object.
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> stmt = DuxDB.prepare(conn, "SELECT ?")
-      iex> DuxDB.destroy_prepare(stmt)
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> stmt = DuckNIF.prepare(conn, "SELECT ?")
+      iex> DuckNIF.destroy_prepare(stmt)
       :ok
 
   See https://duckdb.org/docs/api/c/api#duckdb_destroy_prepare
@@ -473,9 +473,9 @@ defmodule DuxDB do
   @doc """
   Returns the number of parameters that can be provided to the given prepared statement.
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> stmt = DuxDB.prepare(conn, "SELECT ?, ?")
-      iex> DuxDB.nparams(stmt)
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> stmt = DuckNIF.prepare(conn, "SELECT ?, ?")
+      iex> DuckNIF.nparams(stmt)
       2
 
   See https://duckdb.org/docs/api/c/api#duckdb_nparams
@@ -486,9 +486,9 @@ defmodule DuxDB do
   @doc """
   Returns the name used to identify the parameter.
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> stmt = DuxDB.prepare(conn, "SELECT $a, $b")
-      iex> [DuxDB.parameter_name(stmt, 1), DuxDB.parameter_name(stmt, 2)]
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> stmt = DuckNIF.prepare(conn, "SELECT $a, $b")
+      iex> [DuckNIF.parameter_name(stmt, 1), DuckNIF.parameter_name(stmt, 2)]
       ["a", "b"]
 
   See https://duckdb.org/docs/api/c/api#duckdb_parameter_name
@@ -499,10 +499,10 @@ defmodule DuxDB do
   @doc """
   Returns the parameter type for the parameter at the given index.
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> DuxDB.query(conn, "CREATE TABLE a (i INTEGER)")
-      iex> stmt = DuxDB.prepare(conn, "INSERT INTO a VALUES (?)")
-      iex> DuxDB.param_type(stmt, 1)
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> DuckNIF.query(conn, "CREATE TABLE a (i INTEGER)")
+      iex> stmt = DuckNIF.prepare(conn, "INSERT INTO a VALUES (?)")
+      iex> DuckNIF.param_type(stmt, 1)
       4
 
   See https://duckdb.org/docs/api/c/api#duckdb_param_type
@@ -513,9 +513,9 @@ defmodule DuxDB do
   @doc """
   Retrieves the index of the parameter for the prepared statement, identified by name.
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> stmt = DuxDB.prepare(conn, "SELECT $name")
-      iex> DuxDB.bind_parameter_index(stmt, "name")
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> stmt = DuckNIF.prepare(conn, "SELECT $name")
+      iex> DuckNIF.bind_parameter_index(stmt, "name")
       1
 
   See https://duckdb.org/docs/api/c/api#duckdb_bind_parameter_index
@@ -530,9 +530,9 @@ defmodule DuxDB do
   @doc """
   Clears the params bind to the prepared statement.
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> stmt = DuxDB.prepare(conn, "SELECT ?")
-      iex> DuxDB.clear_bindings(stmt)
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> stmt = DuckNIF.prepare(conn, "SELECT ?")
+      iex> DuckNIF.clear_bindings(stmt)
       :ok
 
   See https://duckdb.org/docs/api/c/api#duckdb_clear_bindings
@@ -543,9 +543,9 @@ defmodule DuxDB do
   @doc """
   Returns the statement type of the statement to be executed.
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> stmt = DuxDB.prepare(conn, "SELECT 42")
-      iex> DuxDB.prepared_statement_type(stmt)
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> stmt = DuckNIF.prepare(conn, "SELECT 42")
+      iex> DuckNIF.prepared_statement_type(stmt)
       _select = 1
 
   See https://duckdb.org/docs/api/c/api#duckdb_prepared_statement_type
@@ -564,8 +564,8 @@ defmodule DuxDB do
   > consider using `execute_prepared_dirty_cpu/2` or
   > `execute_prepared_dirty_io/2` instead.
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> result = DuxDB.execute_prepared(DuxDB.prepare(conn, "SELECT 42"))
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> result = DuckNIF.execute_prepared(DuckNIF.prepare(conn, "SELECT 42"))
       iex> is_reference(result)
       true
 
@@ -612,9 +612,9 @@ defmodule DuxDB do
   @doc """
   Binds a boolean value to the specified parameter index.
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> stmt = DuxDB.prepare(conn, "SELECT ?")
-      iex> DuxDB.bind_boolean(stmt, 1, true)
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> stmt = DuckNIF.prepare(conn, "SELECT ?")
+      iex> DuckNIF.bind_boolean(stmt, 1, true)
       :ok
 
   See https://duckdb.org/docs/api/c/api#duckdb_bind_boolean
@@ -625,9 +625,9 @@ defmodule DuxDB do
   @doc """
   Binds a floating point number to the specified parameter index.
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> stmt = DuxDB.prepare(conn, "SELECT ?")
-      iex> DuxDB.bind_double(stmt, 1, 3.14)
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> stmt = DuckNIF.prepare(conn, "SELECT ?")
+      iex> DuckNIF.bind_double(stmt, 1, 3.14)
       :ok
 
   See https://duckdb.org/docs/api/c/api#duckdb_bind_double
@@ -638,9 +638,9 @@ defmodule DuxDB do
   @doc """
   Binds a signed 64-bit integer to the specified parameter index.
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> stmt = DuxDB.prepare(conn, "SELECT ?")
-      iex> DuxDB.bind_int64(stmt, 1, -3)
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> stmt = DuckNIF.prepare(conn, "SELECT ?")
+      iex> DuckNIF.bind_int64(stmt, 1, -3)
       :ok
 
   See https://duckdb.org/docs/api/c/api#duckdb_bind_int64
@@ -651,9 +651,9 @@ defmodule DuxDB do
   @doc """
   Binds an unsigned 64-bit integer to the specified parameter index.
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> stmt = DuxDB.prepare(conn, "SELECT ?")
-      iex> DuxDB.bind_uint64(stmt, 1, 3)
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> stmt = DuckNIF.prepare(conn, "SELECT ?")
+      iex> DuckNIF.bind_uint64(stmt, 1, 3)
       :ok
 
   See https://duckdb.org/docs/api/c/api#duckdb_bind_uint64
@@ -664,33 +664,33 @@ defmodule DuxDB do
   @doc """
   Binds a text value to the specified parameter index.
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> stmt = DuxDB.prepare(conn, "SELECT ?")
-      iex> DuxDB.bind_varchar(stmt, 1, "hello, world")
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> stmt = DuckNIF.prepare(conn, "SELECT ?")
+      iex> DuckNIF.bind_varchar(stmt, 1, "hello, world")
       :ok
 
   Raises `ArgumentError` on invalid `stmt` ref.
 
-      iex> DuxDB.bind_varchar(_not_stmt = :erlang.list_to_ref(~c"#Ref<0.0.0.0>"), 1, "hello, world")
+      iex> DuckNIF.bind_varchar(_not_stmt = :erlang.list_to_ref(~c"#Ref<0.0.0.0>"), 1, "hello, world")
       ** (ArgumentError) argument error: #Reference<0.0.0.0>
 
   (TODO improve) Raises `ArgumentError` on invalid index:
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> stmt = DuxDB.prepare(conn, "SELECT ?")
-      iex> DuxDB.bind_varchar(stmt, _bad_index = 2, "hello, world")
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> stmt = DuckNIF.prepare(conn, "SELECT ?")
+      iex> DuckNIF.bind_varchar(stmt, _bad_index = 2, "hello, world")
       ** (ArgumentError) argument error: "hello, world"
 
   Raises `ArgumentError` on invalid text:
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> stmt = DuxDB.prepare(conn, "SELECT ?")
-      iex> DuxDB.bind_varchar(stmt, 0, _not_text = 1)
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> stmt = DuckNIF.prepare(conn, "SELECT ?")
+      iex> DuckNIF.bind_varchar(stmt, 0, _not_text = 1)
       ** (ArgumentError) argument error: 1
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> stmt = DuxDB.prepare(conn, "SELECT ?")
-      iex> DuxDB.bind_varchar(stmt, 0, _not_printable = <<1, 2, 3>>)
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> stmt = DuckNIF.prepare(conn, "SELECT ?")
+      iex> DuckNIF.bind_varchar(stmt, 0, _not_printable = <<1, 2, 3>>)
       ** (ArgumentError) argument error: <<1, 2, 3>>
 
   See https://duckdb.org/docs/api/c/api#duckdb_bind_varchar_length
@@ -701,9 +701,9 @@ defmodule DuxDB do
   @doc """
   Binds a binary blob to the specified parameter index.
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> stmt = DuxDB.prepare(conn, "SELECT ?")
-      iex> DuxDB.bind_blob(stmt, 1, <<1, 2, 3>>)
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> stmt = DuckNIF.prepare(conn, "SELECT ?")
+      iex> DuckNIF.bind_blob(stmt, 1, <<1, 2, 3>>)
       :ok
 
   See https://duckdb.org/docs/api/c/api#duckdb_bind_blob
@@ -716,9 +716,9 @@ defmodule DuxDB do
   @doc """
   Binds a date (as days since 1970-01-01) to the specified parameter index.
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> stmt = DuxDB.prepare(conn, "SELECT ?")
-      iex> DuxDB.bind_date(stmt, 1, Date.utc_today())
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> stmt = DuckNIF.prepare(conn, "SELECT ?")
+      iex> DuckNIF.bind_date(stmt, 1, Date.utc_today())
       :ok
 
   See https://duckdb.org/docs/api/c/api#duckdb_bind_date
@@ -735,9 +735,9 @@ defmodule DuxDB do
   @doc """
   Binds a time (as microseconds since midnight) to the specified parameter index.
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> stmt = DuxDB.prepare(conn, "SELECT ?")
-      iex> DuxDB.bind_time(stmt, 1, Time.utc_now())
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> stmt = DuckNIF.prepare(conn, "SELECT ?")
+      iex> DuckNIF.bind_time(stmt, 1, Time.utc_now())
       :ok
 
   See https://duckdb.org/docs/api/c/api#duckdb_bind_time
@@ -757,10 +757,10 @@ defmodule DuxDB do
   @doc """
   Binds a timestamp (as microseconds since 1970-01-01 00:00:00) to the specified parameter index.
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> stmt = DuxDB.prepare(conn, "SELECT ?")
-      iex> :ok = DuxDB.bind_timestamp(stmt, 1, DateTime.utc_now())
-      iex> DuxDB.bind_timestamp(stmt, 1, NaiveDateTime.utc_now())
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> stmt = DuckNIF.prepare(conn, "SELECT ?")
+      iex> :ok = DuckNIF.bind_timestamp(stmt, 1, DateTime.utc_now())
+      iex> DuckNIF.bind_timestamp(stmt, 1, NaiveDateTime.utc_now())
       :ok
 
   See https://duckdb.org/docs/api/c/api#duckdb_bind_timestamp
@@ -786,9 +786,9 @@ defmodule DuxDB do
   @doc """
   Binds a duckdb_interval value to the prepared statement at the specified index.
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> stmt = DuxDB.prepare(conn, "SELECT ?")
-      iex> DuxDB.bind_interval(stmt, 1, Duration.new!(second: 42, year: 1999))
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> stmt = DuckNIF.prepare(conn, "SELECT ?")
+      iex> DuckNIF.bind_interval(stmt, 1, Duration.new!(second: 42, year: 1999))
       :ok
 
   See https://duckdb.org/docs/stable/clients/c/api.html#duckdb_bind_interval
@@ -814,9 +814,9 @@ defmodule DuxDB do
   @doc """
   Binds a HUGEINT (128 bit integer) to the specified parameter index.
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> stmt = DuxDB.prepare(conn, "SELECT ?")
-      iex> DuxDB.bind_hugeint(stmt, 1, 0xFFFFFFFFFFFFFFFFF)
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> stmt = DuckNIF.prepare(conn, "SELECT ?")
+      iex> DuckNIF.bind_hugeint(stmt, 1, 0xFFFFFFFFFFFFFFFFF)
       :ok
 
   See https://duckdb.org/docs/api/c/api#duckdb_bind_hugeint
@@ -860,9 +860,9 @@ defmodule DuxDB do
   @doc """
   Binds an UHUGEINT (128 bit unsigned integer) to the specified parameter index.
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> stmt = DuxDB.prepare(conn, "SELECT ?")
-      iex> DuxDB.bind_uhugeint(stmt, 1, 0xFFFFFFFFFFFFFFFFF)
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> stmt = DuckNIF.prepare(conn, "SELECT ?")
+      iex> DuckNIF.bind_uhugeint(stmt, 1, 0xFFFFFFFFFFFFFFFFF)
       :ok
 
   See https://duckdb.org/docs/api/c/api#duckdb_bind_uhugeint
@@ -882,9 +882,9 @@ defmodule DuxDB do
   @doc """
   Binds a NULL value to the specified parameter index.
 
-      iex> conn = DuxDB.connect(DuxDB.open())
-      iex> stmt = DuxDB.prepare(conn, "SELECT ?")
-      iex> DuxDB.bind_null(stmt, 1)
+      iex> conn = DuckNIF.connect(DuckNIF.open())
+      iex> stmt = DuckNIF.prepare(conn, "SELECT ?")
+      iex> DuckNIF.bind_null(stmt, 1)
       :ok
 
   See https://duckdb.org/docs/api/c/api#duckdb_bind_boolean
@@ -904,8 +904,8 @@ defmodule DuxDB do
 
   @doc false
   def load_nif do
-    :code.priv_dir(:duxdb)
-    |> :filename.join(~c"duxdb")
+    :code.priv_dir(:duck_nif)
+    |> :filename.join(~c"duck_nif")
     |> :erlang.load_nif(0)
   end
 end
