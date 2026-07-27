@@ -1,5 +1,7 @@
 Experiments with DuckDB in Elixir.
 
+Maintainers can find the release process in [doc/RELEASING.md](doc/RELEASING.md).
+
 Precompiled native binaries are published for Apple silicon macOS and ARM64 or
 AMD64 Linux using glibc or musl. They include DuckDB itself, so users on these
 platforms do not need to install DuckDB separately. Other platforms compile from
